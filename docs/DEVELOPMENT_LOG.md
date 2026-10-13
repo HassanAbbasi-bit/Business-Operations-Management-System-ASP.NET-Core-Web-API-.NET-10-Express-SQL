@@ -2,6 +2,40 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 11: Modern React web dashboard (Operix) verified
+
+**Status:** Verified complete
+
+**Changes**
+- Scaffolded Vite React client in `frontend/` using bundled Node.js v24.17.0 and npm 11.11.1.
+- Installed `lucide-react` icons for enterprise dashboard components.
+- Configured local development API proxy (`/api` -> `http://localhost:5160`) in `frontend/vite.config.js`.
+- Configured CORS policy (`AllowFrontend`) in `src/BusinessOperations.API/Program.cs` allowing `http://localhost:5173`, `http://localhost:3000`, `http://127.0.0.1:5173`.
+- Implemented `frontend/src/api.js` universal client with JWT token management, automatic Bearer headers, and RFC 7807 `ProblemDetails` error handling.
+- Designed comprehensive modern dark theme design system in `frontend/src/index.css` and `frontend/src/App.css` featuring glassmorphism, responsive grid layouts, custom typography (Plus Jakarta Sans & JetBrains Mono), glowing status badges, and interactive modals.
+- Implemented full operations center in `frontend/src/App.jsx`:
+  - Live backend health & DB ping monitor pill with millisecond latency.
+  - Quick 1-click Demo Profile switcher for Admin (`admin`), Manager (`manager`), and Employee (`employee`).
+  - Executive Overview Dashboard with organization KPI metrics and personal workspace widget.
+  - Personnel & Teams directory with department summary cards, staff search/filter, and profile creation.
+  - Time Off & Leaves tracker with live balance calculation, submission modal, and manager approval/rejection queue.
+  - Task Operations Kanban matrix with priority badges and state machine transitions (`start`, `review`, `requestChanges`, `complete`, `cancel`).
+  - Expense Reimbursements with category breakdown, multi-currency support, and approval workflows.
+  - Non-intrusive floating toast notifications for user actions.
+
+**Verification**
+- Commands run:
+  - `npm run build`: Successfully compiled in 816ms with 0 errors.
+  - `Invoke-WebRequest -Uri "http://localhost:5173"`: Status code 200 OK.
+  - `Invoke-RestMethod -Uri "http://localhost:5160/api/health"`: Status Healthy, Database Connected.
+  - `dotnet test`: 88 tests passing (25 unit tests, 63 integration tests).
+
+**Decisions**
+- Implemented Vite proxy combined with server-side CORS policy to ensure effortless local execution and zero CORS friction during development.
+
+**Next action**
+- Ready for full portfolio demo and showcase.
+
 ## 2026-10-13 — Phase 10: Documentation and release preparation verified
 
 **Status:** Verified complete
