@@ -2,6 +2,42 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 4: Authentication and authorization verified
+ 
+**Status:** Verified complete
+ 
+**Changes**
+- Implemented `IPasswordHasher` in `BusinessOperations.Infrastructure/Services/PasswordHasher.cs` using PBKDF2-HMAC-SHA256 with 100,000 iterations and 128-bit cryptographic salt.
+- Implemented `IJwtTokenGenerator` in `BusinessOperations.Infrastructure/Services/JwtTokenGenerator.cs` generating signed JWT tokens with Subject, Email, Role, EmployeeId, and unique Jti claims.
+- Implemented `IUserRepository`, `IEmployeeRepository`, and `IUnitOfWork` in `BusinessOperations.Infrastructure/Repositories/`.
+- Created authentication DTOs (`RegisterRequestDto`, `LoginRequestDto`, `AuthResponseDto`, `CurrentUserDto`) in `BusinessOperations.Application/DTOs/Auth/`.
+- Implemented strict input validation with `RegisterRequestValidator` and `LoginRequestValidator` using FluentValidation.
+- Implemented `AuthService` in `BusinessOperations.Application/Services/AuthService.cs` handling registration, credential verification, duplicate prevention, and token issuance.
+- Configured ASP.NET Core JWT Bearer authentication and role-based policies (`RequireAdmin`, `RequireManager`, `RequireEmployee`) in `BusinessOperations.API/Program.cs`.
+- Implemented `AuthController` (`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `GET /api/auth/admin-only`, `GET /api/auth/manager-only`).
+- Added comprehensive unit tests (`PasswordHasherTests.cs`) and integration tests (`AuthEndpointTests.cs`).
+ 
+**Verification**
+- Commands run:
+  - `dotnet test`: 38 tests passing (25 unit tests + 13 integration tests).
+  - Integration tests verified:
+    - User registration returns HTTP 201 Created and valid JWT token.
+    - Duplicate email registration returns HTTP 400 Bad Request.
+    - Login with valid credentials returns HTTP 200 OK and token.
+    - Login with wrong password returns HTTP 400 Bad Request.
+    - Unauthenticated `/api/auth/me` returns HTTP 401 Unauthorized.
+    - Authenticated `/api/auth/me` returns HTTP 200 OK with correct profile.
+    - Regular employee accessing `/api/auth/admin-only` returns HTTP 403 Forbidden.
+    - Regular employee accessing `/api/auth/manager-only` returns HTTP 403 Forbidden.
+  - `dotnet build`: 0 Warnings, 0 Errors.
+ 
+**Decisions**
+- Enforced password complexity rules (minimum 8 characters, uppercase, lowercase, digit, special character).
+- Enforced strict server-side role authorization; public registration assigns `UserRole.Employee` only.
+ 
+**Next action**
+- Phase 5: Implement department and employee profile CRUD, pagination, filtering, and role scoping.
+ 
 ## 2026-10-13 — Phase 3: API foundation, global exception handling, and health check verified
  
 **Status:** Verified complete

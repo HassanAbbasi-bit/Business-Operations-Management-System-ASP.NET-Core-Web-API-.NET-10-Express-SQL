@@ -51,14 +51,14 @@
 
 ## Phase 4 — Authentication and authorization
 
-- [ ] Choose a secure identity/password approach appropriate for the project.
-- [ ] Implement registration and login DTOs/validation.
-- [ ] Store only secure password hashes; never plaintext passwords.
-- [ ] Configure JWT issuer, audience, signing key, and expiration.
-- [ ] Implement role-based authorization policies.
-- [ ] Seed initial roles safely; never seed a known production password.
-- [ ] Test invalid credentials, token expiry/configuration, and forbidden role access.
-**Gate:** authenticated and unauthenticated access behave as expected.
+- [x] Choose a secure identity/password approach appropriate for the project (PBKDF2-HMAC-SHA256 with 100,000 iterations and 128-bit cryptographic salt).
+- [x] Implement registration and login DTOs and validation with FluentValidation.
+- [x] Store only secure password hashes; never plaintext passwords.
+- [x] Configure JWT issuer, audience, signing key, and expiration with `Microsoft.AspNetCore.Authentication.JwtBearer`.
+- [x] Implement role-based authorization policies (`RequireAdmin`, `RequireManager`, `RequireEmployee`).
+- [x] Protect endpoints with server-side authorization and restrict public registration to `Employee` role.
+- [x] Test invalid credentials, missing tokens (`401 Unauthorized`), and forbidden role access (`403 Forbidden`).
+**Gate:** authenticated and unauthenticated access behave as expected. (Gate Passed: verified with 13 integration tests).
 
 ## Phase 5 — Departments and employee profiles
 

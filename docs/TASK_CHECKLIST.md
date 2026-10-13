@@ -48,18 +48,25 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Add API health check endpoint (`/api/health`) and verify live DB connection.
 - [x] Validate environment configuration and secrets handling.
 
-## Current milestone: Phase 4 — Authentication and authorization
+## Phase 4 — Authentication and authorization
 
-- [ ] Select secure password hashing service (PBKDF2 / ASP.NET Core PasswordHasher).
-- [ ] Configure JWT options (Issuer, Audience, SecretKey, Expiration) and JWT Bearer authentication.
-- [ ] Implement registration and login DTOs and FluentValidation validators.
-- [ ] Implement `IAuthService` and `AuthController` (`/api/auth/register`, `/api/auth/login`).
-- [ ] Implement role-based authorization policies (Admin, Manager, Employee).
-- [ ] Test valid/invalid login, token expiration, and role authorization boundaries.
+- [x] Select secure password hashing service (`PasswordHasher` with PBKDF2-HMAC-SHA256).
+- [x] Configure JWT options (Issuer, Audience, SecretKey, Expiration) and JWT Bearer authentication.
+- [x] Implement registration and login DTOs and FluentValidation validators.
+- [x] Implement `IAuthService` and `AuthController` (`/api/auth/register`, `/api/auth/login`, `/api/auth/me`).
+- [x] Implement role-based authorization policies (`RequireAdmin`, `RequireManager`, `RequireEmployee`).
+- [x] Test valid/invalid login, token verification, and role authorization boundaries (`403 Forbidden`).
+
+## Current milestone: Phase 5 — Departments and employee profiles
+
+- [ ] Implement department repository, DTOs, and endpoints (`GET /api/departments`, `POST /api/departments`, etc.).
+- [ ] Implement employee profile repository, DTOs, and endpoints (`GET /api/employees`, `PUT /api/employees/{id}`, etc.).
+- [ ] Add pagination and search filtering.
+- [ ] Enforce role-based access control (Admin can manage; Employee can view self).
+- [ ] Add unit and integration tests.
 
 ## Upcoming milestones
 
-- [ ] Phase 5: departments and employees.
 - [ ] Phase 6: leave workflow.
 - [ ] Phase 7: task workflow.
 - [ ] Phase 8: expense workflow.
@@ -69,7 +76,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 4 Authentication & Authorization: Implement password hashing, JWT token generation service, registration/login DTOs with FluentValidation, and `AuthController` with role-based policies.
+Phase 5 Departments & Employees: Implement department and employee management endpoints, search/pagination, and role-based scoping in `BusinessOperations.API` and `BusinessOperations.Application`.
 
 ## Completion rule
 

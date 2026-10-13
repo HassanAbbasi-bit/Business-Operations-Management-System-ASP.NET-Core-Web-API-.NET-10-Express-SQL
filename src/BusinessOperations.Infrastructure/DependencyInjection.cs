@@ -1,3 +1,5 @@
+using BusinessOperations.Application.Interfaces;
+using BusinessOperations.Application.Interfaces.Repositories;
 using BusinessOperations.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +16,13 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddScoped<IUserRepository, Repositories.UserRepository>();
+        services.AddScoped<IEmployeeRepository, Repositories.EmployeeRepository>();
+        services.AddScoped<IUnitOfWork, Repositories.UnitOfWork>();
+
+        services.AddSingleton<IPasswordHasher, Services.PasswordHasher>();
+        services.AddScoped<IJwtTokenGenerator, Services.JwtTokenGenerator>();
 
         return services;
     }

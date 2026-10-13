@@ -72,8 +72,9 @@ As of 2026-10-13:
 - Solution scaffold (Phase 0): **Confirmed created & passing** (`BusinessOperations.slnx`)
 - Domain model (Phase 1): **Confirmed implemented & verified** (25 unit tests passing)
 - Persistence foundation (Phase 2): **Confirmed configured & migrated** (EF Core 10.0.12, `ApplicationDbContext`, `InitialCreate` migration applied to `.\SQLEXPRESS` creating `BusinessOperationsDb` with all 7 tables)
-- API foundation (Phase 3): **Confirmed implemented & verified** (`ExceptionHandlingMiddleware` RFC 7807 ProblemDetails, `HealthController` with live DB check, integration tests passing)
-- Tests: **Confirmed passing** (26 tests total: 25 unit tests, 1 integration test)
-- Current Phase: **Phase 4 — Authentication and Authorization**
+- API foundation (Phase 3): **Confirmed implemented & verified** (`ExceptionHandlingMiddleware` RFC 7807 ProblemDetails, `HealthController` with live DB check)
+- Authentication & Authorization (Phase 4): **Confirmed implemented & verified** (PBKDF2 password hashing, JWT Bearer tokens, registration, login, role policies `RequireAdmin`/`RequireManager`/`RequireEmployee`)
+- Tests: **Confirmed passing** (38 tests total: 25 unit tests, 13 integration tests)
+- Current Phase: **Phase 5 — Departments and Employee Profiles**
 
 Never describe unverified work as completed. Update this file when verified facts change.
