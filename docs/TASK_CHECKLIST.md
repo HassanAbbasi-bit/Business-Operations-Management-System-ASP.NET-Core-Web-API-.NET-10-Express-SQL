@@ -74,25 +74,32 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Approve/Reject workflow with reviewer auditing and prevent self-approval.
 - [x] Add unit and integration tests (41 integration tests passing, 25 unit tests passing).
 
-## Current milestone: Phase 7 — Task management
+## Phase 7 — Task management
 
-- [ ] Implement task repository, DTOs, and validators.
-- [ ] Create and assign tasks endpoint.
-- [ ] List tasks by assignee/status/priority/due date with pagination.
-- [ ] Define and enforce permitted status transitions (`Todo` -> `InProgress` -> `InReview` -> `Done`).
-- [ ] Enforce who can create, assign, edit, and complete tasks.
+- [x] Implement task repository, DTOs, and validators (`ITaskItemRepository`, `TaskItemRepository`, `CreateTaskItemDto`, `UpdateTaskItemDto`, `TaskItemDto`).
+- [x] Create and assign tasks endpoint (`POST /api/tasks`, `PUT /api/tasks/{id}`).
+- [x] List tasks by assignee/status/priority/due date with pagination (`GET /api/tasks`).
+- [x] Define and enforce permitted status transitions (`Todo` -> `InProgress` -> `InReview` -> `Done`, cancellation and changes-requested guards).
+- [x] Enforce who can create, assign, edit, and complete tasks.
+- [x] Add unit and integration tests (48 integration tests passing, 25 unit tests passing).
+
+## Current milestone: Phase 8 — Expense management
+
+- [ ] Implement expense repository, DTOs, and validators.
+- [ ] Submit expense endpoint with amount, currency, category, date, and description.
+- [ ] Review/approve/reject expenses with audit fields and prevent self-approval.
+- [ ] List and filter expenses with pagination.
 - [ ] Add unit and integration tests.
 
 ## Upcoming milestones
 
-- [ ] Phase 8: expense workflow.
 - [ ] Phase 9: dashboard, quality, and integration tests.
 - [ ] Phase 10: README, GitHub, deployment readiness.
 - [ ] Phase 11: optional frontend.
 
 ## Current next action
 
-Phase 7 Task Management: Implement task repository, DTOs, service, workflow state machine transitions, and endpoints in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
+Phase 8 Expense Management: Implement expense repository, DTOs, service, review/approval workflow, and endpoints with domain validations in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
 
 ## Completion rule
 

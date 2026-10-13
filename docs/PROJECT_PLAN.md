@@ -82,12 +82,12 @@
 
 ## Phase 7 — Task management
 
-- [ ] Create and assign tasks.
-- [ ] List tasks by assignee/status/priority/due date.
-- [ ] Define permitted status transitions.
-- [ ] Enforce who can create, assign, edit, and complete tasks.
-- [ ] Add tests for invalid transitions and access control.
-**Gate:** task workflow tests pass.
+- [x] Create and assign tasks (`POST /api/tasks`, `PUT /api/tasks/{id}`).
+- [x] List tasks by assignee/status/priority/due date with pagination (`GET /api/tasks`).
+- [x] Define permitted status transitions (`Todo` -> `InProgress` -> `InReview` -> `Done`, cancellation and changes-requested guards).
+- [x] Enforce who can create, assign, edit, and complete tasks.
+- [x] Add tests for invalid transitions and access control (`TasksEndpointTests.cs`).
+**Gate:** task workflow tests pass. (Gate Passed: verified with 73 total passing tests: 25 unit, 48 integration).
 
 ## Phase 8 — Expense management
 

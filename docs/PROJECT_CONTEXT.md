@@ -76,7 +76,8 @@ As of 2026-10-13:
 - Authentication & Authorization (Phase 4): **Confirmed implemented & verified** (PBKDF2 password hashing, JWT Bearer tokens, registration, login, role policies `RequireAdmin`/`RequireManager`/`RequireEmployee`)
 - Departments & Employee Profiles (Phase 5): **Confirmed implemented & verified** (`DepartmentsController`, `EmployeesController`, pagination/search, role barriers, tamper protection)
 - Leave Management (Phase 6): **Confirmed implemented & verified** (`LeaveRequestsController`, submission, overlap check, balance deduction, approval/rejection lifecycle, self-approval prevention)
-- Tests: **Confirmed passing** (66 tests total: 25 unit tests, 41 integration tests)
-- Current Phase: **Phase 7 — Task Management**
+- Task Management (Phase 7): **Confirmed implemented & verified** (`TasksController`, assignment, state machine transitions, cancellation guards)
+- Tests: **Confirmed passing** (73 tests total: 25 unit tests, 48 integration tests)
+- Current Phase: **Phase 8 — Expense Management**
 
 Never describe unverified work as completed. Update this file when verified facts change.

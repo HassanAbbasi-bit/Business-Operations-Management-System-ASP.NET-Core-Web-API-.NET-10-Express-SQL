@@ -2,6 +2,40 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 7: Task management workflow verified
+
+**Status:** Verified complete
+
+**Changes**
+- Implemented `ITaskItemRepository` and `TaskItemRepository` in `BusinessOperations.Infrastructure/Repositories/TaskItemRepository.cs` with eager loading, filtering (status, priority, assignee, creator), and pagination.
+- Created task DTOs (`CreateTaskItemDto`, `UpdateTaskItemDto`, `TaskItemDto`) in `BusinessOperations.Application/DTOs/Tasks/`.
+- Implemented FluentValidation validators (`CreateTaskItemValidator`, `UpdateTaskItemValidator`).
+- Implemented `ITaskItemService` and `TaskItemService` in `BusinessOperations.Application/Services/`:
+  - Enforces required creator profile, assignee verification, and title constraints.
+  - Implements state machine workflow: `StartProgressAsync` (`Todo` -> `InProgress`), `SubmitForReviewAsync` (`InProgress` -> `InReview`), `RequestChangesAsync` (`InReview` -> `InProgress`), `CompleteAsync` (non-cancelled -> `Done`), `CancelAsync` (non-done -> `Cancelled`).
+- Implemented `TasksController` in `BusinessOperations.API/Controllers/TasksController.cs`:
+  - `GET /api/tasks`: Paginated list with filtering by status, priority, assignee, creator.
+  - `GET /api/tasks/{id}`: Single task view.
+  - `POST /api/tasks`: Creates a new task.
+  - `PUT /api/tasks/{id}`: Updates task details, priority, and assignee.
+  - `POST /api/tasks/{id}/start`: Transitions task from Todo to InProgress.
+  - `POST /api/tasks/{id}/review`: Transitions task from InProgress to InReview.
+  - `POST /api/tasks/{id}/request-changes`: Transitions task from InReview back to InProgress.
+  - `POST /api/tasks/{id}/complete`: Marks task as Done.
+  - `POST /api/tasks/{id}/cancel`: Cancels task.
+- Implemented integration tests in `tests/BusinessOperations.IntegrationTests/Controllers/TasksEndpointTests.cs` (7 tests).
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 73 tests passing (25 unit tests in `BusinessOperations.UnitTests`, 48 integration tests in `BusinessOperations.IntegrationTests`).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Implemented strict state machine transition validation in the Domain model and Application service, ensuring invalid out-of-order transitions reject requests with HTTP 400 ProblemDetails.
+
+**Next action**
+- Phase 8: Implement Expense Management workflow (submission, amounts, category, audit fields, reviewer self-approval prevention, filtering/pagination).
+
 ## 2026-10-13 — Phase 6: Leave management workflow verified
 
 **Status:** Verified complete
