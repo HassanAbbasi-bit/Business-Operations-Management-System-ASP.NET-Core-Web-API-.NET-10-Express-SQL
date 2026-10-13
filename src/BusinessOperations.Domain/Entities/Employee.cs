@@ -129,6 +129,15 @@ public class Employee : BaseEntity
         MarkUpdated();
     }
 
+    public void SetLeaveBalance(int days)
+    {
+        if (days < 0)
+            throw new DomainException("Leave balance cannot be negative.");
+
+        AnnualLeaveBalanceDays = days;
+        MarkUpdated();
+    }
+
     public void Deactivate()
     {
         IsActive = false;

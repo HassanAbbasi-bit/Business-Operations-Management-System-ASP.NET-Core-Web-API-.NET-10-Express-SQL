@@ -57,17 +57,25 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Implement role-based authorization policies (`RequireAdmin`, `RequireManager`, `RequireEmployee`).
 - [x] Test valid/invalid login, token verification, and role authorization boundaries (`403 Forbidden`).
 
-## Current milestone: Phase 5 — Departments and employee profiles
+## Phase 5 — Departments and employee profiles
 
-- [ ] Implement department repository, DTOs, and endpoints (`GET /api/departments`, `POST /api/departments`, etc.).
-- [ ] Implement employee profile repository, DTOs, and endpoints (`GET /api/employees`, `PUT /api/employees/{id}`, etc.).
-- [ ] Add pagination and search filtering.
-- [ ] Enforce role-based access control (Admin can manage; Employee can view self).
+- [x] Implement department repository, DTOs, and endpoints (`GET /api/departments`, `POST /api/departments`, `PUT /api/departments/{id}`).
+- [x] Implement employee profile repository, DTOs, and endpoints (`GET /api/employees`, `GET /api/employees/{id}`, `POST /api/employees`, `PUT /api/employees/{id}`).
+- [x] Add pagination and search filtering (`PagedResult<T>`).
+- [x] Enforce role-based access control (Admin can manage; Manager can search/list; Employee can view/edit self only; tamper protection).
+- [x] Add unit and integration tests (30 integration tests passing, 25 unit tests passing).
+
+## Current milestone: Phase 6 — Leave management
+
+- [ ] Implement leave request repository and DTOs.
+- [ ] Submit leave request endpoint with validation (date ranges, overlap prevention, positive day counts).
+- [ ] Leave balance check and deduction/refund logic.
+- [ ] List own leave requests (Employee) and review list (Manager/Admin).
+- [ ] Approve/Reject workflow with reviewer auditing and prevent self-approval.
 - [ ] Add unit and integration tests.
 
 ## Upcoming milestones
 
-- [ ] Phase 6: leave workflow.
 - [ ] Phase 7: task workflow.
 - [ ] Phase 8: expense workflow.
 - [ ] Phase 9: dashboard, quality, and integration tests.
@@ -76,7 +84,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 5 Departments & Employees: Implement department and employee management endpoints, search/pagination, and role-based scoping in `BusinessOperations.API` and `BusinessOperations.Application`.
+Phase 6 Leave Management: Implement leave request DTOs, repository, services, approval workflow, and endpoints with domain validations in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
 
 ## Completion rule
 

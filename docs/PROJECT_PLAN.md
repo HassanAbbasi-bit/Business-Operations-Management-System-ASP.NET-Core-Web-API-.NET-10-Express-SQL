@@ -62,12 +62,12 @@
 
 ## Phase 5 — Departments and employee profiles
 
-- [ ] Implement department endpoints and business rules.
-- [ ] Implement employee profile endpoints.
-- [ ] Add pagination, search, filtering, and sorting where useful.
-- [ ] Enforce role-based access and prevent unauthorized data exposure.
-- [ ] Add unit/integration tests.
-**Gate:** API behavior and authorization tests pass.
+- [x] Implement department endpoints and business rules.
+- [x] Implement employee profile endpoints.
+- [x] Add pagination, search, filtering, and sorting where useful (`PagedResult<T>`).
+- [x] Enforce role-based access and prevent unauthorized data exposure (Admin management, Manager paged search, self-view/update).
+- [x] Add unit/integration tests (`DepartmentsEndpointTests`, `EmployeesEndpointTests`).
+**Gate:** API behavior and authorization tests pass. (Gate Passed: verified with 55 total passing tests: 25 unit, 30 integration).
 
 ## Phase 6 — Leave management
 

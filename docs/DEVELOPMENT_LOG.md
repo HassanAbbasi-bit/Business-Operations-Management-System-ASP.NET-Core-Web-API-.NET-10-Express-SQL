@@ -2,6 +2,43 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 5: Departments and employee profiles verified
+
+**Status:** Verified complete
+
+**Changes**
+- Implemented `IDepartmentRepository` and `DepartmentRepository` in `BusinessOperations.Infrastructure/Repositories/DepartmentRepository.cs` with EF Core queries, eager loading, and duplicate checks.
+- Extended `IEmployeeRepository` and implemented `EmployeeRepository` with `GetPagedAsync` (search across first name, last name, email; department filtering; pagination) and `GetAllAsync`.
+- Created department DTOs (`DepartmentDto`, `CreateDepartmentDto`, `UpdateDepartmentDto`) and employee DTOs (`EmployeeDto`, `CreateEmployeeDto`, `UpdateEmployeeDto`) in `BusinessOperations.Application/DTOs/`.
+- Implemented FluentValidation validators (`CreateDepartmentValidator`, `UpdateDepartmentValidator`, `CreateEmployeeValidator`, `UpdateEmployeeValidator`).
+- Implemented `DepartmentService` and `EmployeeService` in `BusinessOperations.Application/Services/` enforcing unique department names, valid department relationships, unique employee emails, and leave balance adjustment safeguards.
+- Added `SetLeaveBalance(int days)` domain invariant method to `Employee` entity.
+- Implemented `DepartmentsController` in `BusinessOperations.API/Controllers/DepartmentsController.cs`:
+  - `GET /api/departments`: Accessible to all authenticated users.
+  - `GET /api/departments/{id}`: Returns 200 OK or 404 NotFound.
+  - `POST /api/departments`: Admin only; returns 201 Created.
+  - `PUT /api/departments/{id}`: Admin only; returns 200 OK.
+- Implemented `EmployeesController` in `BusinessOperations.API/Controllers/EmployeesController.cs`:
+  - `GET /api/employees`: Paginated search with department filter; Manager or Admin only.
+  - `GET /api/employees/{id}`: Manager and Admin can view any employee; regular employees can only view their own profile (403 Forbidden for others).
+  - `POST /api/employees`: Admin only; returns 201 Created.
+  - `PUT /api/employees/{id}`: Admins can update all fields; non-admins can only update their own profile and are prevented from tampering with department or leave balance (403 Forbidden when attempting to update others).
+- Created comprehensive integration test suites:
+  - `DepartmentsEndpointTests.cs` (7 tests covering unauthenticated, read, create, duplicate rejection, forbidden role, and update).
+  - `EmployeesEndpointTests.cs` (10 tests covering paging, filtering, unauthorized, role barriers, self vs other profile visibility, and tamper protection).
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 55 tests passing (25 unit tests in `BusinessOperations.UnitTests`, 30 integration tests in `BusinessOperations.IntegrationTests`).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Implemented tamper protection in `EmployeesController.Update`: when a non-admin updates their own profile, fields like `DepartmentId` and `AnnualLeaveBalanceDays` are locked to their existing values so malicious payload tampering is silently neutralized.
+- Integrated real registered users in integration test fixtures to ensure relational foreign key constraints between `Employees.UserId` and `Users.Id` in SQL Server are verified.
+
+**Next action**
+- Phase 6: Implement Leave Management workflow (submission, date validation, overlap prevention, balance deductions, manager approval/rejection lifecycle, self-approval prevention).
+
 ## 2026-10-13 — Phase 4: Authentication and authorization verified
  
 **Status:** Verified complete

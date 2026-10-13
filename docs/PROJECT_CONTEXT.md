@@ -74,7 +74,8 @@ As of 2026-10-13:
 - Persistence foundation (Phase 2): **Confirmed configured & migrated** (EF Core 10.0.12, `ApplicationDbContext`, `InitialCreate` migration applied to `.\SQLEXPRESS` creating `BusinessOperationsDb` with all 7 tables)
 - API foundation (Phase 3): **Confirmed implemented & verified** (`ExceptionHandlingMiddleware` RFC 7807 ProblemDetails, `HealthController` with live DB check)
 - Authentication & Authorization (Phase 4): **Confirmed implemented & verified** (PBKDF2 password hashing, JWT Bearer tokens, registration, login, role policies `RequireAdmin`/`RequireManager`/`RequireEmployee`)
-- Tests: **Confirmed passing** (38 tests total: 25 unit tests, 13 integration tests)
-- Current Phase: **Phase 5 — Departments and Employee Profiles**
+- Departments & Employee Profiles (Phase 5): **Confirmed implemented & verified** (`DepartmentsController`, `EmployeesController`, pagination/search, role barriers, tamper protection)
+- Tests: **Confirmed passing** (55 tests total: 25 unit tests, 30 integration tests)
+- Current Phase: **Phase 6 — Leave Management**
 
 Never describe unverified work as completed. Update this file when verified facts change.
