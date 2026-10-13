@@ -65,18 +65,26 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Enforce role-based access control (Admin can manage; Manager can search/list; Employee can view/edit self only; tamper protection).
 - [x] Add unit and integration tests (30 integration tests passing, 25 unit tests passing).
 
-## Current milestone: Phase 6 — Leave management
+## Phase 6 — Leave management
 
-- [ ] Implement leave request repository and DTOs.
-- [ ] Submit leave request endpoint with validation (date ranges, overlap prevention, positive day counts).
-- [ ] Leave balance check and deduction/refund logic.
-- [ ] List own leave requests (Employee) and review list (Manager/Admin).
-- [ ] Approve/Reject workflow with reviewer auditing and prevent self-approval.
+- [x] Implement leave request repository and DTOs (`ILeaveRequestRepository`, `LeaveRequestRepository`, `CreateLeaveRequestDto`, `LeaveRequestDto`, `ReviewLeaveRequestDto`).
+- [x] Submit leave request endpoint with validation (date ranges, overlap prevention, positive day counts).
+- [x] Leave balance check and deduction upon approval (`employee.DeductLeaveDays(daysCount)`).
+- [x] List own leave requests (`GET /api/leaverequests/my`) and review list (`GET /api/leaverequests` for Manager/Admin).
+- [x] Approve/Reject workflow with reviewer auditing and prevent self-approval.
+- [x] Add unit and integration tests (41 integration tests passing, 25 unit tests passing).
+
+## Current milestone: Phase 7 — Task management
+
+- [ ] Implement task repository, DTOs, and validators.
+- [ ] Create and assign tasks endpoint.
+- [ ] List tasks by assignee/status/priority/due date with pagination.
+- [ ] Define and enforce permitted status transitions (`Todo` -> `InProgress` -> `InReview` -> `Done`).
+- [ ] Enforce who can create, assign, edit, and complete tasks.
 - [ ] Add unit and integration tests.
 
 ## Upcoming milestones
 
-- [ ] Phase 7: task workflow.
 - [ ] Phase 8: expense workflow.
 - [ ] Phase 9: dashboard, quality, and integration tests.
 - [ ] Phase 10: README, GitHub, deployment readiness.
@@ -84,7 +92,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 6 Leave Management: Implement leave request DTOs, repository, services, approval workflow, and endpoints with domain validations in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
+Phase 7 Task Management: Implement task repository, DTOs, service, workflow state machine transitions, and endpoints in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
 
 ## Completion rule
 

@@ -2,6 +2,44 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 6: Leave management workflow verified
+
+**Status:** Verified complete
+
+**Changes**
+- Implemented `ILeaveRequestRepository` and `LeaveRequestRepository` in `BusinessOperations.Infrastructure/Repositories/LeaveRequestRepository.cs` with eager loading, filtering, paging, and date overlap detection (`HasActiveOverlappingRequestAsync`).
+- Created leave request DTOs (`CreateLeaveRequestDto`, `LeaveRequestDto`, `ReviewLeaveRequestDto`) in `BusinessOperations.Application/DTOs/LeaveRequests/`.
+- Implemented `CreateLeaveRequestValidator` using FluentValidation checking date validity, interval constraints, and required reason.
+- Implemented `ILeaveRequestService` and `LeaveRequestService` in `BusinessOperations.Application/Services/`:
+  - Enforces positive day counts and checks annual leave balance against requested duration.
+  - Detects overlapping active (`Pending` or `Approved`) requests.
+  - Connects caller identity to their employee profile.
+  - Deducts balance upon manager approval (`employee.DeductLeaveDays(daysCount)`).
+  - Enforces self-approval prevention at both application service and domain layers.
+  - Requires explicit review reason upon rejection.
+  - Allows cancellation only for requests in `Pending` state by their owner.
+- Implemented `LeaveRequestsController` in `BusinessOperations.API/Controllers/LeaveRequestsController.cs`:
+  - `POST /api/leaverequests`: Submits a new leave request.
+  - `GET /api/leaverequests/my`: Retrieves caller's personal leave requests.
+  - `GET /api/leaverequests`: Paged search for Managers and Admins with status and department filtering.
+  - `GET /api/leaverequests/{id}`: Submitter, Manager, or Admin profile viewing.
+  - `POST /api/leaverequests/{id}/approve`: Approves request and deducts leave balance; prevents self-approval.
+  - `POST /api/leaverequests/{id}/reject`: Rejects request with audit notes; prevents self-review.
+  - `POST /api/leaverequests/{id}/cancel`: Submitter cancels pending request.
+- Implemented integration tests in `tests/BusinessOperations.IntegrationTests/Controllers/LeaveRequestsEndpointTests.cs` (11 tests).
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 66 tests passing (25 unit tests in `BusinessOperations.UnitTests`, 41 integration tests in `BusinessOperations.IntegrationTests`).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Implemented leave balance deduction on approval rather than submission: Days remain in the balance while in `Pending` review, but overlap checks prevent overbooking dates. Upon approval, `employee.DeductLeaveDays` decrements the official leave balance.
+- Enforced rejection reason requirement: Rejection without documented reason is rejected with HTTP 400 ProblemDetails.
+
+**Next action**
+- Phase 7: Implement Task Management workflow (creation, assignment, status state machine transitions `Todo` -> `InProgress` -> `InReview` -> `Done`, priority, due date, access control).
+
 ## 2026-10-13 — Phase 5: Departments and employee profiles verified
 
 **Status:** Verified complete

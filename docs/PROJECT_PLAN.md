@@ -71,14 +71,14 @@
 
 ## Phase 6 — Leave management
 
-- [ ] Submit leave request.
-- [ ] List own requests; managers/admins list permitted requests.
-- [ ] Approve/reject requests with reviewer and timestamp.
-- [ ] Prevent invalid dates and overlapping active requests.
-- [ ] Define and enforce leave balance policy.
-- [ ] Prevent self-approval and unauthorized review.
-- [ ] Test concurrency-sensitive and invalid transitions.
-**Gate:** documented leave rules are enforced by tests.
+- [x] Submit leave request (`POST /api/leaverequests`).
+- [x] List own requests (`GET /api/leaverequests/my`); managers/admins list permitted requests (`GET /api/leaverequests`).
+- [x] Approve/reject requests with reviewer, audit fields, and timestamp (`POST /api/leaverequests/{id}/approve`, `POST /api/leaverequests/{id}/reject`).
+- [x] Prevent invalid dates and overlapping active requests (`HasActiveOverlappingRequestAsync`).
+- [x] Define and enforce leave balance policy (`employee.DeductLeaveDays(daysCount)`).
+- [x] Prevent self-approval and unauthorized review (`reviewer.Id != leaveRequest.EmployeeId`).
+- [x] Test concurrency-sensitive and invalid transitions (`LeaveRequestsEndpointTests.cs`).
+**Gate:** documented leave rules are enforced by tests. (Gate Passed: verified with 66 total passing tests: 25 unit, 41 integration).
 
 ## Phase 7 — Task management
 
