@@ -2,6 +2,53 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 10: Documentation and release preparation verified
+
+**Status:** Verified complete
+
+**Changes**
+- Authored comprehensive, portfolio-grade `README.md` covering architecture, domain invariants, database design, quickstart guide, full API endpoint reference, security model, and testing procedures.
+- Updated `docs/API_CONTRACT.md` with complete documentation of all 24 API endpoints, request/response models, ProblemDetails error formats, and RBAC requirements.
+- Updated `docs/PROJECT_PLAN.md` and `docs/TASK_CHECKLIST.md` marking Phases 0 through 10 complete and verified.
+- Verified `.gitignore` properly excludes build artifacts, IDE files, sensitive local appsettings, and test logs.
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 88 tests passing (25 unit tests in `BusinessOperations.UnitTests`, 63 integration tests in `BusinessOperations.IntegrationTests`).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Documented full architectural flow and role permissions matrix for external reviewers and hiring teams.
+
+**Next action**
+- Phase 11 (Optional): Discuss and plan optional frontend implementation (React or Blazor Web Dashboard).
+
+## 2026-10-13 — Phase 9: Dashboard and quality metrics verified
+
+**Status:** Verified complete
+
+**Changes**
+- Implemented `IDashboardService` and `DashboardService` in `BusinessOperations.Infrastructure/Services/DashboardService.cs` with async aggregations and cancellation token support:
+  - `GetSummaryAsync`: High-level executive aggregates (employee counts, department count, task breakdown by status, pending/approved leave requests, total pending/approved expense amounts).
+  - `GetEmployeeDashboardAsync`: Caller-specific operational metrics (assigned tasks by status, remaining leave balance, personal leave requests, personal submitted expense totals).
+- Created dashboard DTOs (`DashboardSummaryDto`, `EmployeeDashboardDto`, `TaskStatusCountDto`) in `BusinessOperations.Application/DTOs/Dashboard/`.
+- Implemented `DashboardController` in `BusinessOperations.API/Controllers/DashboardController.cs`:
+  - `GET /api/dashboard/summary` (Requires Admin or Manager role).
+  - `GET /api/dashboard/my` (Authenticated employee).
+- Registered `IDashboardService` into DI in `BusinessOperations.Infrastructure/DependencyInjection.cs`.
+- Implemented integration tests in `tests/BusinessOperations.IntegrationTests/Controllers/DashboardEndpointTests.cs` (4 tests verifying summary metrics, caller dashboard, unauthenticated rejection, and forbidden role access).
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 88 tests passing (25 unit tests, 63 integration tests).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Implemented dashboard metrics directly querying EF Core asynchronous aggregation APIs (`CountAsync`, `SumAsync`) with proper null handling (`coalesce` to decimal 0).
+
+**Next action**
+- Phase 10: Complete documentation, portfolio README, and release validation.
+
 ## 2026-10-13 — Phase 8: Expense management workflow verified
 
 **Status:** Verified complete

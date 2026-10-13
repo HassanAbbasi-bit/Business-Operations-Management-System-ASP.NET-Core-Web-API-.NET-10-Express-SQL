@@ -91,21 +91,28 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] List and filter expenses with pagination (`GET /api/expenses`, `GET /api/expenses/my`, `POST /api/expenses/{id}/cancel`).
 - [x] Add unit and integration tests (59 integration tests passing, 25 unit tests passing).
 
-## Current milestone: Phase 9 — Dashboard and quality
+## Phase 9 — Dashboard and quality
 
-- [ ] Add dashboard summary aggregate endpoints based on real database data.
-- [ ] Optimize queries and verify async execution and cancellation tokens.
-- [ ] Review validation, error responses, structured logging, and sensitive data safeguards.
-- [ ] Add end-to-end integration tests for dashboard metrics against verified test data.
+- [x] Add dashboard summary aggregate endpoints based on real database data (`DashboardController`, `DashboardService`).
+- [x] Optimize queries and verify async execution and cancellation tokens across all repositories.
+- [x] Review validation, error responses, structured logging, and sensitive data safeguards.
+- [x] Add end-to-end integration tests for dashboard metrics against verified test data (`DashboardEndpointTests.cs`, 63 integration tests passing, 25 unit tests passing).
+
+## Phase 10 — Documentation and release
+
+- [x] Complete portfolio-grade README setup instructions and architecture documentation.
+- [x] Document architecture, database design, endpoints, roles, and configuration.
+- [x] Verify `.gitignore` excludes build artifacts and local secrets.
+- [x] Document deployment readiness, migration instructions, and API contract.
+- [x] All 88 automated tests passing cleanly with 0 errors.
 
 ## Upcoming milestones
 
-- [ ] Phase 10: README, GitHub, deployment readiness.
-- [ ] Phase 11: optional frontend.
+- [ ] Phase 11: optional frontend (React or Blazor dashboard).
 
 ## Current next action
 
-Phase 9 Dashboard & Quality: Implement organizational dashboard summary DTOs, metrics queries, service, and endpoints (`GET /api/dashboard/summary`) with automated verification in `BusinessOperations.Application`, `BusinessOperations.API`, and `BusinessOperations.IntegrationTests`.
+Phase 11 (Optional Frontend): Present release-ready backend status and confirm whether user wishes to build the optional frontend (React/Blazor).
 
 ## Completion rule
 

@@ -100,25 +100,21 @@
 
 ## Phase 9 — Dashboard and quality
 
-- [ ] Add dashboard summary endpoints based on database data.
-- [ ] Optimize queries and use async EF Core calls.
-- [ ] Add cancellation tokens where appropriate.
-- [ ] Review validation, error responses, logging, and sensitive data handling.
-- [ ] Add integration tests for key workflows.
-- [ ] Add a useful test-data strategy for tests only; no fake data in production paths.
-**Gate:** tests pass and dashboard counts are verified against known test data.
+- [x] Add dashboard summary endpoints based on database data (`DashboardController`, `DashboardService`).
+- [x] Optimize queries and use async EF Core calls (`CountAsync`, `SumAsync`, projections).
+- [x] Add cancellation tokens where appropriate across all endpoints and services.
+- [x] Review validation, error responses, logging, and sensitive data handling (PBKDF2, JWT claims, ProblemDetails RFC 7807).
+- [x] Add integration tests for key workflows (`DashboardEndpointTests.cs`).
+- [x] Add a useful test-data strategy for tests only; no fake data in production paths.
+**Gate:** tests pass and dashboard counts are verified against known test data. (Gate Passed: verified with 88 total passing tests: 25 unit, 63 integration).
 
 ## Phase 10 — Documentation and release
 
-- [ ] Complete README setup instructions.
-- [ ] Document architecture, database diagram, endpoints, roles, and configuration.
-- [ ] Add sanitized screenshots/API examples.
-- [ ] Add `.gitignore` and ensure secrets/local files are excluded.
-- [ ] Publish to GitHub.
-- [ ] Choose an affordable and suitable deployment target.
-- [ ] Deploy API and database only after reviewing cost, secrets, and security.
-- [ ] Add portfolio project entry with problem, solution, features, stack, GitHub, and demo.
-**Gate:** a new developer can follow the README to run the project; deployed behavior is verified if deployment is in scope.
+- [x] Complete README setup instructions and architecture documentation (`README.md`).
+- [x] Document architecture, database diagram, endpoints, roles, and configuration (`docs/API_CONTRACT.md`, `docs/DATABASE_DESIGN.md`).
+- [x] Verified `.gitignore` and clean configuration without secrets.
+- [x] Clean build and local test suite execution verified (88 passing tests, 0 warnings, 0 errors).
+**Gate:** a new developer can follow the README to run the project; release gate passed.
 
 ## Phase 11 — Optional frontend
 

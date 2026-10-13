@@ -78,7 +78,9 @@ As of 2026-10-13:
 - Leave Management (Phase 6): **Confirmed implemented & verified** (`LeaveRequestsController`, submission, overlap check, balance deduction, approval/rejection lifecycle, self-approval prevention)
 - Task Management (Phase 7): **Confirmed implemented & verified** (`TasksController`, assignment, state machine transitions, cancellation guards)
 - Expense Management (Phase 8): **Confirmed implemented & verified** (`ExpensesController`, amount/category validations, review workflow, self-approval prevention)
-- Tests: **Confirmed passing** (84 tests total: 25 unit tests, 59 integration tests)
-- Current Phase: **Phase 9 — Dashboard and Quality**
+- Dashboard and Quality (Phase 9): **Confirmed implemented & verified** (`DashboardController`, executive summary & personal operational metrics, cancellation tokens, async aggregations)
+- Documentation and Release (Phase 10): **Confirmed completed & verified** (Comprehensive portfolio README, API contract, and release guides)
+- Tests: **Confirmed passing** (88 tests total: 25 unit tests, 63 integration tests; 0 warnings, 0 errors)
+- Current Milestone: **Backend Core Complete (Phases 0–10). Ready for optional Phase 11 (Frontend).**
 
 Never describe unverified work as completed. Update this file when verified facts change.

@@ -1,90 +1,92 @@
-# API Contract — Planned
+# API Contract — Implemented
 
-This is a proposed endpoint map, not a claim that endpoints exist. Confirm route names, response DTOs, pagination format, and permissions during implementation.
+All endpoints are implemented in `BusinessOperations.API` and verified by automated integration tests.
 
 ## Conventions
 
 - Prefix: `/api`
 - JSON request/response bodies.
-- Use appropriate HTTP status codes.
-- Use DTOs, not database entities, in public responses.
-- Use consistent validation and error response shapes.
-- Paginate collection endpoints.
-- Use UTC timestamps for event timestamps; use date-only formats for leave/expense dates.
-- Require bearer authentication except for explicitly public endpoints such as registration/login.
+- Standard HTTP status codes (`200 OK`, `201 Created`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 NotFound`).
+- RFC 7807 `ProblemDetails` for errors.
+- Strong typed DTOs in responses.
+- Paginated responses wrapped in `PagedResult<T>` with `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage`, `HasNextPage`.
+- JWT Bearer authentication on protected endpoints.
 
-## Authentication
+## Authentication (`/api/auth`)
 
-| Method | Route | Purpose | Access |
+| Method | Route | Description | Access |
 |---|---|---|---|
-| POST | `/api/auth/register` | Register an eligible user | Public or restricted by registration policy |
-| POST | `/api/auth/login` | Authenticate and issue token | Public |
+| POST | `/api/auth/register` | Register new user account with `Employee` role | Public |
+| POST | `/api/auth/login` | Authenticate and issue signed JWT bearer token | Public |
+| GET | `/api/auth/me` | Retrieve profile and role claims of authenticated caller | `[Authorize]` |
+| GET | `/api/auth/admin-only` | Administrative access policy check | `RequireAdmin` |
+| GET | `/api/auth/manager-only`| Management access policy check | `RequireManager` |
 
-Registration must not allow arbitrary callers to grant themselves Admin or Manager roles.
+## Departments (`/api/departments`)
 
-## Departments and employees
-
-| Method | Route | Purpose | Planned access |
+| Method | Route | Description | Access |
 |---|---|---|---|
-| GET | `/api/departments` | List departments | Authenticated; refine by role |
-| GET | `/api/departments/{id}` | Department details | Authorized |
-| POST | `/api/departments` | Create department | Admin |
-| PUT | `/api/departments/{id}` | Update department | Admin |
-| GET | `/api/employees` | Search/list employees | Admin/Manager; scope results |
-| GET | `/api/employees/{id}` | Employee details | Self or authorized manager/admin |
-| POST | `/api/employees` | Create employee profile | Admin |
-| PUT | `/api/employees/{id}` | Update profile | Self for allowed fields; Admin for privileged fields |
+| GET | `/api/departments` | List all departments with employee counts | `[Authorize]` |
+| GET | `/api/departments/{id}` | Retrieve department by ID | `[Authorize]` |
+| POST | `/api/departments` | Create new department | `RequireAdmin` |
+| PUT | `/api/departments/{id}` | Update department name and manager | `RequireAdmin` |
 
-## Leave requests
+## Employees (`/api/employees`)
 
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/leaves` | Submit leave request |
-| GET | `/api/leaves/my` | List caller's requests |
-| GET | `/api/leaves` | List permitted requests with filters |
-| GET | `/api/leaves/{id}` | View an authorized request |
-| POST | `/api/leaves/{id}/approve` | Approve a pending request |
-| POST | `/api/leaves/{id}/reject` | Reject a pending request |
-| POST | `/api/leaves/{id}/cancel` | Cancel if business rules allow |
+| Method | Route | Description | Access |
+|---|---|---|---|
+| GET | `/api/employees` | Search and filter employees (paged) | `RequireManager` |
+| GET | `/api/employees/{id}` | Retrieve employee profile | Submitter, Manager, or Admin |
+| POST | `/api/employees` | Create employee profile | `RequireAdmin` |
+| PUT | `/api/employees/{id}` | Update employee profile (tamper-protected) | Self (names/email) or Admin (all) |
 
-## Tasks
+## Leave Requests (`/api/leaverequests`)
 
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/tasks` | Create task |
-| GET | `/api/tasks` | List permitted tasks with filters |
-| GET | `/api/tasks/{id}` | Task details |
-| PUT | `/api/tasks/{id}` | Update permitted task fields |
-| PATCH | `/api/tasks/{id}/status` | Change status using validated transitions |
+| Method | Route | Description | Access |
+|---|---|---|---|
+| POST | `/api/leaverequests` | Submit leave request with date and balance validation | `[Authorize]` |
+| GET | `/api/leaverequests/my` | Retrieve authenticated caller's leave history | `[Authorize]` |
+| GET | `/api/leaverequests` | Query leave requests with status/department filters (paged) | `RequireManager` |
+| GET | `/api/leaverequests/{id}` | Retrieve single leave request | Submitter, Manager, or Admin |
+| POST | `/api/leaverequests/{id}/approve` | Approve leave and deduct balance (prevents self-approval) | `RequireManager` |
+| POST | `/api/leaverequests/{id}/reject` | Reject leave request with required reason | `RequireManager` |
+| POST | `/api/leaverequests/{id}/cancel` | Cancel pending leave request | Submitter |
 
-## Expenses
+## Tasks (`/api/tasks`)
 
-| Method | Route | Purpose |
-|---|---|---|
-| POST | `/api/expenses` | Submit expense |
-| GET | `/api/expenses/my` | List caller's expenses |
-| GET | `/api/expenses` | List permitted expenses with filters |
-| GET | `/api/expenses/{id}` | View an authorized expense |
-| POST | `/api/expenses/{id}/approve` | Approve pending expense |
-| POST | `/api/expenses/{id}/reject` | Reject pending expense |
+| Method | Route | Description | Access |
+|---|---|---|---|
+| GET | `/api/tasks` | List tasks with status/priority/assignee filters (paged) | `[Authorize]` |
+| GET | `/api/tasks/{id}` | Retrieve task details | `[Authorize]` |
+| POST | `/api/tasks` | Create task assigned to employee | `[Authorize]` |
+| PUT | `/api/tasks/{id}` | Update task details, assignee, priority | `[Authorize]` |
+| POST | `/api/tasks/{id}/start` | Transition status: `Todo` -> `InProgress` | `[Authorize]` |
+| POST | `/api/tasks/{id}/review` | Transition status: `InProgress` -> `InReview` | `[Authorize]` |
+| POST | `/api/tasks/{id}/request-changes` | Transition status: `InReview` -> `InProgress` | `[Authorize]` |
+| POST | `/api/tasks/{id}/complete` | Mark task complete: `Done` | `[Authorize]` |
+| POST | `/api/tasks/{id}/cancel` | Cancel task (from non-done status) | `[Authorize]` |
 
-## Dashboard
+## Expenses (`/api/expenses`)
 
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/dashboard/summary` | Return counts scoped to the caller's permissions |
+| Method | Route | Description | Access |
+|---|---|---|---|
+| POST | `/api/expenses` | Submit expense reimbursement request | `[Authorize]` |
+| GET | `/api/expenses/my` | Retrieve caller's submitted expenses | `[Authorize]` |
+| GET | `/api/expenses` | Query expenses with category/status filters (paged) | `RequireManager` |
+| GET | `/api/expenses/{id}` | Retrieve single expense reimbursement | Submitter, Manager, or Admin |
+| POST | `/api/expenses/{id}/approve` | Approve expense reimbursement (prevents self-approval) | `RequireManager` |
+| POST | `/api/expenses/{id}/reject` | Reject expense with required audit reason | `RequireManager` |
+| POST | `/api/expenses/{id}/cancel` | Cancel pending expense submission | Submitter |
 
-Do not expose global company statistics to an Employee unless that is an explicit policy decision.
+## Dashboard (`/api/dashboard`)
 
-## Standard status expectations
+| Method | Route | Description | Access |
+|---|---|---|---|
+| GET | `/api/dashboard/summary` | Organization-wide executive metrics aggregate | `RequireManager` |
+| GET | `/api/dashboard/my` | Personal operational metrics for authenticated employee | `[Authorize]` |
 
-- `200 OK`: successful read/update where a response is returned.
-- `201 Created`: resource created; include a location when practical.
-- `204 No Content`: successful operation without a body.
-- `400 Bad Request`: malformed/invalid request or validation failure (choose one consistent validation convention).
-- `401 Unauthorized`: missing/invalid authentication.
-- `403 Forbidden`: authenticated but not allowed.
-- `404 Not Found`: resource does not exist or is intentionally concealed by authorization policy.
-- `409 Conflict`: conflicting state, duplicate, or invalid workflow transition where appropriate.
+## System Health (`/api/health`)
 
-Use `ProblemDetails`/`ValidationProblemDetails` or another consistent documented shape.
+| Method | Route | Description | Access |
+|---|---|---|---|
+| GET | `/api/health` | Live database connectivity and health probe | Public |
