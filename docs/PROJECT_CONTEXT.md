@@ -68,13 +68,11 @@ Scope is planned, not implemented. Refine requirements before coding each module
 
 ## Important status rule
 
-As of 2026-10-13, Phase 0 is complete:
-- Solution scaffold: **Confirmed created** (`BusinessOperations.slnx`)
-- Clean Architecture dependencies: **Confirmed wired**
-- Restore & Build: **Confirmed passing (0 Warnings, 0 Errors)**
-- Baseline tests: **Confirmed passing (UnitTests & IntegrationTests)**
-- Database engine: **Confirmed running on `.\SQLEXPRESS`**
-- Git repository: **Confirmed initialized**
-- Entities/migrations/endpoints: **Next phase (Phase 1 Domain Modeling)**
+As of 2026-10-13:
+- Solution scaffold (Phase 0): **Confirmed created & passing** (`BusinessOperations.slnx`)
+- Domain model (Phase 1): **Confirmed implemented & verified** (25 unit tests passing)
+- Persistence foundation (Phase 2): **Confirmed configured & migrated** (EF Core 10.0.12, `ApplicationDbContext`, `InitialCreate` migration applied to `.\SQLEXPRESS` creating `BusinessOperationsDb` with all 7 tables)
+- Tests: **Confirmed passing** (26 tests total: 25 unit tests, 1 integration test)
+- Current Phase: **Phase 3 — API Foundation**
 
 Never describe unverified work as completed. Update this file when verified facts change.

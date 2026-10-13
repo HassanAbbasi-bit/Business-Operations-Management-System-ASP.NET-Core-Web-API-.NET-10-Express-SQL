@@ -31,13 +31,13 @@
 
 ## Phase 2 — Persistence foundation
 
-- [ ] Select compatible EF Core 10 packages.
-- [ ] Configure SQL Server connection string through local configuration/user secrets.
-- [ ] Add `ApplicationDbContext` and entity configurations.
-- [ ] Configure indexes, constraints, relationships, and delete behavior.
-- [ ] Create first migration and database.
-- [ ] Verify schema and migration reproducibility.
-**Gate:** app connects to the intended local SQL Server instance and migrations work.
+- [x] Select compatible EF Core 10 packages (`Microsoft.EntityFrameworkCore.SqlServer` 10.0.12, `Microsoft.EntityFrameworkCore.Design` 10.0.12).
+- [x] Configure SQL Server connection string in `appsettings.json` and `appsettings.Development.json` (`Server=.\\SQLEXPRESS;Database=BusinessOperationsDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True`).
+- [x] Add `ApplicationDbContext` and entity configurations using Fluent API.
+- [x] Configure indexes, constraints, relationships, and delete behavior.
+- [x] Create first migration (`InitialCreate`) and database.
+- [x] Verify schema and migration reproducibility (verified with `sqlcmd` against `BusinessOperationsDb`).
+**Gate:** app connects to the intended local SQL Server instance and migrations work. (Gate Passed: verified against `.\SQLEXPRESS`).
 
 ## Phase 3 — API foundation
 

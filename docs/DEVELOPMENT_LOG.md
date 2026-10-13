@@ -2,6 +2,43 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 2: Persistence foundation completed and database migrated
+ 
+**Status:** Verified complete
+ 
+**Changes**
+- Installed EF Core 10 packages:
+  - `Microsoft.EntityFrameworkCore.SqlServer` 10.0.12 in `BusinessOperations.Infrastructure`.
+  - `Microsoft.EntityFrameworkCore.Design` 10.0.12 in `BusinessOperations.API`.
+- Installed local dotnet tool manifest and `dotnet-ef` tool (version 10.0.12).
+- Implemented `ApplicationDbContext` and Fluent API entity configurations:
+  - `UserConfiguration.cs`: Unique index on email, length constraints, 1-to-0..1 Employee relationship.
+  - `DepartmentConfiguration.cs`: Unique index on department name, Restrict delete behavior on employees.
+  - `EmployeeConfiguration.cs`: Self-referencing manager hierarchy, unique email, unique filtered index on `UserId`, Restrict delete behavior.
+  - `LeaveRequestConfiguration.cs`: Date types, status conversions, composite indexes, Restrict delete behavior.
+  - `TaskItemConfiguration.cs`: Priority/status conversions, SetNull on assigned employee, Restrict on creator.
+  - `ExpenseConfiguration.cs`: Precision 18,2, ISO currency code, date types, Restrict delete behavior.
+- Configured SQL Server connection string in `appsettings.json` and `appsettings.Development.json` targeting `.\SQLEXPRESS` (`BusinessOperationsDb`).
+- Registered `AddInfrastructureServices` in `Program.cs`.
+- Generated initial EF Core migration `InitialCreate`.
+- Applied migration to `.\SQLEXPRESS` creating `BusinessOperationsDb` and all 7 tables with foreign keys and indexes.
+ 
+**Verification**
+- Commands run:
+  - `dotnet ef dbcontext info`: Successfully resolved `ApplicationDbContext` on `.\SQLEXPRESS`.
+  - `dotnet ef migrations add InitialCreate`: Migration generated in `BusinessOperations.Infrastructure/Migrations/`.
+  - `dotnet ef database update`: Successfully executed DDL against SQL Server Express.
+  - `sqlcmd -S ".\SQLEXPRESS" -d "BusinessOperationsDb" -E -Q "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';"`: Confirmed 7 tables (`__EFMigrationsHistory`, `Departments`, `Users`, `Employees`, `Expenses`, `LeaveRequests`, `TaskItems`).
+  - `dotnet test`: 26 tests passing.
+  - `dotnet build`: 0 Warnings, 0 Errors.
+ 
+**Decisions**
+- Configured delete behavior to `DeleteBehavior.Restrict` for organizational entities and audit records to prevent accidental cascades.
+- Used filtered unique index on `Employee.UserId` (`[UserId] IS NOT NULL`) to support optional user association.
+ 
+**Next action**
+- Phase 3: Implement API foundation, global exception handling, ProblemDetails, structured logging, and health endpoints.
+ 
 ## 2026-10-13 — Phase 1: Domain modeling and requirements finalized
  
 **Status:** Verified complete

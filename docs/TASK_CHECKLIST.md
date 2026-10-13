@@ -32,17 +32,24 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Implement domain entities, enums, value objects, and invariants in `BusinessOperations.Domain`.
 - [x] Implement unit tests in `BusinessOperations.UnitTests` (25 tests passing).
 
-## Current milestone: Phase 2 — Persistence foundation
+## Phase 2 — Persistence foundation
 
-- [ ] Select compatible EF Core 10 packages for `Infrastructure` and `API`.
-- [ ] Configure SQL Server connection string (`Server=.\\SQLEXPRESS;Database=BusinessOperationsDb;Trusted_Connection=True;TrustServerCertificate=True`).
-- [ ] Implement `ApplicationDbContext` and Fluent API entity configurations.
-- [ ] Create initial EF Core migration and generate database.
-- [ ] Verify schema and migration reproducibility.
+- [x] Select compatible EF Core 10 packages for `Infrastructure` and `API` (`Microsoft.EntityFrameworkCore.SqlServer` 10.0.12, `Microsoft.EntityFrameworkCore.Design` 10.0.12).
+- [x] Configure SQL Server connection string (`Server=.\\SQLEXPRESS;Database=BusinessOperationsDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True`).
+- [x] Implement `ApplicationDbContext` and Fluent API entity configurations.
+- [x] Create initial EF Core migration (`InitialCreate`) and generate database.
+- [x] Verify schema and migration reproducibility against `.\SQLEXPRESS`.
+
+## Current milestone: Phase 3 — API foundation
+
+- [ ] Add consistent API response conventions and ProblemDetails middleware.
+- [ ] Configure global exception handling middleware with structured logging.
+- [ ] Configure OpenAPI / Swagger with custom document metadata.
+- [ ] Add API health check endpoint (`/health`).
+- [ ] Validate environment configuration and secrets handling.
 
 ## Upcoming milestones
 
-- [ ] Phase 3: API foundation and error handling.
 - [ ] Phase 4: authentication/authorization.
 - [ ] Phase 5: departments and employees.
 - [ ] Phase 6: leave workflow.
@@ -54,7 +61,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 2 Persistence: Add EF Core 10 packages (`Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.EntityFrameworkCore.Design`) and build `ApplicationDbContext` with Fluent API configurations for all entities.
+Phase 3 API Foundation: Implement global exception handling middleware, consistent ProblemDetails error response format, health checks, and API response envelope / conventions in `BusinessOperations.API`.
 
 ## Completion rule
 
