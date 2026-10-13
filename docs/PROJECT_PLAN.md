@@ -21,13 +21,13 @@
 
 ## Phase 1 — Requirements and domain model
 
-- [ ] Define role permissions and employee/manager relationship rules.
-- [ ] Finalize entities, enums, relationships, required fields, and delete behavior.
-- [ ] Decide how an authenticated user maps to an employee profile.
-- [ ] Define leave-day counting and balance rules.
-- [ ] Define expense approval rules and task status transitions.
-- [ ] Review `DATABASE_DESIGN.md`.
-**Gate:** domain and database decisions are documented before migrations.
+- [x] Define role permissions and employee/manager relationship rules.
+- [x] Finalize entities, enums, relationships, required fields, and delete behavior.
+- [x] Decide how an authenticated user maps to an employee profile.
+- [x] Define leave-day counting and balance rules.
+- [x] Define expense approval rules and task status transitions.
+- [x] Review `DATABASE_DESIGN.md`.
+**Gate:** domain and database decisions are documented before migrations. (Gate Passed: verified with 25 unit tests).
 
 ## Phase 2 — Persistence foundation
 

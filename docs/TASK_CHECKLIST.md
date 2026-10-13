@@ -21,10 +21,27 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Run baseline `dotnet test`.
 - [x] Commit scaffold and project documentation.
 
+## Phase 1 — Requirements and domain model
+
+- [x] Define role permissions and employee/manager relationship rules.
+- [x] Finalize entities, enums, relationships, required fields, and delete behavior.
+- [x] Decide how an authenticated user maps to an employee profile.
+- [x] Define leave-day counting and balance rules.
+- [x] Define expense approval rules and task status transitions.
+- [x] Review `DATABASE_DESIGN.md`.
+- [x] Implement domain entities, enums, value objects, and invariants in `BusinessOperations.Domain`.
+- [x] Implement unit tests in `BusinessOperations.UnitTests` (25 tests passing).
+
+## Current milestone: Phase 2 — Persistence foundation
+
+- [ ] Select compatible EF Core 10 packages for `Infrastructure` and `API`.
+- [ ] Configure SQL Server connection string (`Server=.\\SQLEXPRESS;Database=BusinessOperationsDb;Trusted_Connection=True;TrustServerCertificate=True`).
+- [ ] Implement `ApplicationDbContext` and Fluent API entity configurations.
+- [ ] Create initial EF Core migration and generate database.
+- [ ] Verify schema and migration reproducibility.
+
 ## Upcoming milestones
 
-- [-] Phase 1: finalize requirements/domain model.
-- [ ] Phase 2: configure EF Core and SQL Server.
 - [ ] Phase 3: API foundation and error handling.
 - [ ] Phase 4: authentication/authorization.
 - [ ] Phase 5: departments and employees.
@@ -37,7 +54,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 1 Domain Modeling: Review and finalize the core domain entities, enums, rules, and value objects in `BusinessOperations.Domain` (Department, Employee, User, Role, LeaveRequest, TaskItem, Expense) before writing EF Core mappings.
+Phase 2 Persistence: Add EF Core 10 packages (`Microsoft.EntityFrameworkCore.SqlServer`, `Microsoft.EntityFrameworkCore.Design`) and build `ApplicationDbContext` with Fluent API configurations for all entities.
 
 ## Completion rule
 

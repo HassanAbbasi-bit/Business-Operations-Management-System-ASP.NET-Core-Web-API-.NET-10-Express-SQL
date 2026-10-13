@@ -2,6 +2,40 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 1: Domain modeling and requirements finalized
+ 
+**Status:** Verified complete
+ 
+**Changes**
+- Created pure domain enums: `UserRole`, `LeaveStatus`, `TaskItemStatus`, `TaskPriority`, `ExpenseStatus`, `ExpenseCategory` in `BusinessOperations.Domain/Enums/`.
+- Created `BaseEntity` in `BusinessOperations.Domain/Common/` with `Id` (Guid), `CreatedAtUtc`, `UpdatedAtUtc`, and update tracking.
+- Created `DomainException` in `BusinessOperations.Domain/Exceptions/` to guard against business invariant violations.
+- Implemented rich domain entities in `BusinessOperations.Domain/Entities/`:
+  - `User`: Email validation/normalization, password hashing encapsulation, role management, activation states.
+  - `Department`: Name, description, manager assignment.
+  - `Employee`: Names, department association, manager hierarchy, user account linkage, leave balance adjustments, and self-reporting prevention.
+  - `LeaveRequest`: Date interval validation, inclusive days calculation, status lifecycle (`Pending` -> `Approved` / `Rejected` / `Cancelled`), self-approval prevention, rejection reason requirement.
+  - `TaskItem`: Title, assignee, creator, priority, status lifecycle (`Todo` -> `InProgress` -> `InReview` -> `Done`), cancellation rules, completion tracking.
+  - `Expense`: Category, positive amount validation, future date restriction, currency code formatting, status lifecycle, self-approval prevention.
+- Added comprehensive unit tests in `BusinessOperations.UnitTests/Domain/` verifying all invariants:
+  - `LeaveRequestTests.cs`: 8 tests
+  - `ExpenseTests.cs`: 6 tests
+  - `TaskItemTests.cs`: 4 tests
+  - `EmployeeTests.cs`: 5 tests
+- Finalized `DATABASE_DESIGN.md` with explicit column types, foreign key behaviors, and index definitions.
+ 
+**Verification**
+- Commands run:
+  - `dotnet test`: 25 passed in `BusinessOperations.UnitTests`, 1 passed in `BusinessOperations.IntegrationTests`. Total 26 passing tests.
+  - `dotnet build`: 0 Warnings, 0 Errors.
+ 
+**Decisions**
+- Implemented custom `User` entity to maintain architectural decoupling from ASP.NET Identity and give full control over JWT claims and password hashing.
+- Established self-review guardrails at the domain level (an employee cannot approve their own leave request or expense submission).
+ 
+**Next action**
+- Phase 2: Configure EF Core 10, SQL Server (`.\SQLEXPRESS`), `ApplicationDbContext`, entity configurations, and initial database migration.
+ 
 ## 2026-10-13 — Phase 0: Environment verification and solution scaffold completed
  
 **Status:** Verified complete
