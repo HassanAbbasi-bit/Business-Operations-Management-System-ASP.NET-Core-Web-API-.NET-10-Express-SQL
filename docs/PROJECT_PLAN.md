@@ -41,13 +41,13 @@
 
 ## Phase 3 — API foundation
 
-- [ ] Configure dependency injection and application services.
-- [ ] Configure OpenAPI/Swagger.
-- [ ] Add consistent API response/error conventions.
-- [ ] Add global exception handling and structured logging.
-- [ ] Add health endpoint if useful.
-- [ ] Confirm no secrets are committed.
-**Gate:** API starts locally and basic endpoints work.
+- [x] Configure dependency injection and application services (`AddInfrastructureServices`).
+- [x] Configure OpenAPI / Swagger support (`MapOpenApi`, OpenAPI document endpoints).
+- [x] Add consistent API response/error conventions (`ProblemDetails` RFC 7807, `PagedResult<T>`).
+- [x] Add global exception handling (`ExceptionHandlingMiddleware`) and structured logging.
+- [x] Add health endpoint (`/api/health`) verifying live database connectivity.
+- [x] Confirm no secrets are committed (verified clean configuration with local connection strings).
+**Gate:** API starts locally and basic endpoints work. (Gate Passed: verified via integration tests against live SQL Server).
 
 ## Phase 4 — Authentication and authorization
 

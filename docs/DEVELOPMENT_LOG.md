@@ -2,6 +2,33 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 3: API foundation, global exception handling, and health check verified
+ 
+**Status:** Verified complete
+ 
+**Changes**
+- Created `ExceptionHandlingMiddleware` in `BusinessOperations.API/Middleware/`:
+  - Catches `DomainException` and maps to HTTP 400 Bad Request with RFC 7807 `ProblemDetails`.
+  - Catches unhandled exceptions, performs structured logging with `ILogger`, and returns HTTP 500 without leaking stack traces.
+- Created generic `PagedResult<T>` in `BusinessOperations.Application/Common/Models/` for consistent collection responses.
+- Removed template `WeatherForecast` controller and model.
+- Created `HealthController` (`/api/health`) in `BusinessOperations.API/Controllers/` with live SQL Server database check via `CanConnectAsync`.
+- Exposed `public partial class Program { }` to enable in-memory integration testing with `WebApplicationFactory`.
+- Created live integration test `HealthEndpointTests` in `BusinessOperations.IntegrationTests/Controllers/`.
+ 
+**Verification**
+- Commands run:
+  - `dotnet test`: 26 tests passing (25 unit tests + 1 live integration test).
+  - Health check endpoint integration test against `.\SQLEXPRESS` returned HTTP 200 OK with `{"status":"Healthy","database":"Connected"}`.
+  - `dotnet build`: 0 Warnings, 0 Errors.
+ 
+**Decisions**
+- Implemented standard RFC 7807 `ProblemDetails` for centralized error response formatting.
+- Configured health endpoint to check real database connection readiness.
+ 
+**Next action**
+- Phase 4: Implement authentication, password hashing, JWT bearer tokens, registration/login endpoints, and role-based authorization policies.
+ 
 ## 2026-10-13 — Phase 2: Persistence foundation completed and database migrated
  
 **Status:** Verified complete

@@ -40,17 +40,25 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Create initial EF Core migration (`InitialCreate`) and generate database.
 - [x] Verify schema and migration reproducibility against `.\SQLEXPRESS`.
 
-## Current milestone: Phase 3 — API foundation
+## Phase 3 — API foundation
 
-- [ ] Add consistent API response conventions and ProblemDetails middleware.
-- [ ] Configure global exception handling middleware with structured logging.
-- [ ] Configure OpenAPI / Swagger with custom document metadata.
-- [ ] Add API health check endpoint (`/health`).
-- [ ] Validate environment configuration and secrets handling.
+- [x] Add consistent API response conventions and ProblemDetails middleware.
+- [x] Configure global exception handling middleware with structured logging (`ExceptionHandlingMiddleware`).
+- [x] Configure OpenAPI / Swagger with custom document metadata.
+- [x] Add API health check endpoint (`/api/health`) and verify live DB connection.
+- [x] Validate environment configuration and secrets handling.
+
+## Current milestone: Phase 4 — Authentication and authorization
+
+- [ ] Select secure password hashing service (PBKDF2 / ASP.NET Core PasswordHasher).
+- [ ] Configure JWT options (Issuer, Audience, SecretKey, Expiration) and JWT Bearer authentication.
+- [ ] Implement registration and login DTOs and FluentValidation validators.
+- [ ] Implement `IAuthService` and `AuthController` (`/api/auth/register`, `/api/auth/login`).
+- [ ] Implement role-based authorization policies (Admin, Manager, Employee).
+- [ ] Test valid/invalid login, token expiration, and role authorization boundaries.
 
 ## Upcoming milestones
 
-- [ ] Phase 4: authentication/authorization.
 - [ ] Phase 5: departments and employees.
 - [ ] Phase 6: leave workflow.
 - [ ] Phase 7: task workflow.
@@ -61,7 +69,7 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 
 ## Current next action
 
-Phase 3 API Foundation: Implement global exception handling middleware, consistent ProblemDetails error response format, health checks, and API response envelope / conventions in `BusinessOperations.API`.
+Phase 4 Authentication & Authorization: Implement password hashing, JWT token generation service, registration/login DTOs with FluentValidation, and `AuthController` with role-based policies.
 
 ## Completion rule
 
