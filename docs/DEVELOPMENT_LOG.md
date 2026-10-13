@@ -2,6 +2,42 @@
 
 Keep entries newest first. Record what changed, files touched, commands/tests run, results, and the next action. Avoid recording credentials or secrets.
 
+## 2026-10-13 — Phase 8: Expense management workflow verified
+
+**Status:** Verified complete
+
+**Changes**
+- Implemented `IExpenseRepository` and `ExpenseRepository` in `BusinessOperations.Infrastructure/Repositories/ExpenseRepository.cs` with eager loading, filtering (status, category, employee, department), and pagination.
+- Created expense DTOs (`CreateExpenseDto`, `ExpenseDto`, `ReviewExpenseDto`) in `BusinessOperations.Application/DTOs/Expenses/`.
+- Implemented `CreateExpenseValidator` checking positive amount, required description, 3-letter currency code, and prohibiting future dates.
+- Implemented `IExpenseService` and `ExpenseService` in `BusinessOperations.Application/Services/`:
+  - Enforces active employee profile requirements.
+  - Implements review and approval lifecycle (`Pending` -> `Approved` / `Rejected` / `Cancelled`).
+  - Guards against self-approval and self-review.
+  - Requires documented rejection reason.
+  - Restricts cancellation to the submitting employee while in `Pending` state.
+- Implemented `ExpensesController` in `BusinessOperations.API/Controllers/ExpensesController.cs`:
+  - `POST /api/expenses`: Submits a new expense.
+  - `GET /api/expenses/my`: Retrieves caller's expenses.
+  - `GET /api/expenses`: Paged list for Managers and Admins with category, status, and department filters.
+  - `GET /api/expenses/{id}`: Single expense view (submitter, manager, or admin).
+  - `POST /api/expenses/{id}/approve`: Approves reimbursement request.
+  - `POST /api/expenses/{id}/reject`: Rejects reimbursement request with reason.
+  - `POST /api/expenses/{id}/cancel`: Submitter cancels pending expense.
+- Implemented integration tests in `tests/BusinessOperations.IntegrationTests/Controllers/ExpensesEndpointTests.cs` (11 tests).
+
+**Verification**
+- Commands run:
+  - `dotnet test`: 84 tests passing (25 unit tests in `BusinessOperations.UnitTests`, 59 integration tests in `BusinessOperations.IntegrationTests`).
+  - `dotnet build`: 0 Warnings, 0 Errors.
+
+**Decisions**
+- Enforced strict monetary rounding (`MidpointRounding.AwayFromZero`) and currency formatting at the domain layer.
+- Enforced self-approval prevention at both Application service and Domain levels.
+
+**Next action**
+- Phase 9: Implement Dashboard and quality improvements (summary metrics, query optimizations, cancellation tokens, automated metric verification against live data).
+
 ## 2026-10-13 — Phase 7: Task management workflow verified
 
 **Status:** Verified complete

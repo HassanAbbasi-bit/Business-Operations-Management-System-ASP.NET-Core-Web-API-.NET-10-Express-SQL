@@ -83,23 +83,29 @@ Legend: `[ ]` not done, `[-]` in progress, `[x]` complete and verified, `[!]` bl
 - [x] Enforce who can create, assign, edit, and complete tasks.
 - [x] Add unit and integration tests (48 integration tests passing, 25 unit tests passing).
 
-## Current milestone: Phase 8 — Expense management
+## Phase 8 — Expense management
 
-- [ ] Implement expense repository, DTOs, and validators.
-- [ ] Submit expense endpoint with amount, currency, category, date, and description.
-- [ ] Review/approve/reject expenses with audit fields and prevent self-approval.
-- [ ] List and filter expenses with pagination.
-- [ ] Add unit and integration tests.
+- [x] Implement expense repository, DTOs, and validators (`IExpenseRepository`, `ExpenseRepository`, `CreateExpenseDto`, `ExpenseDto`, `ReviewExpenseDto`).
+- [x] Submit expense endpoint with amount, currency, category, date, and description (`POST /api/expenses`).
+- [x] Review/approve/reject expenses with audit fields and prevent self-approval (`POST /api/expenses/{id}/approve`, `POST /api/expenses/{id}/reject`).
+- [x] List and filter expenses with pagination (`GET /api/expenses`, `GET /api/expenses/my`, `POST /api/expenses/{id}/cancel`).
+- [x] Add unit and integration tests (59 integration tests passing, 25 unit tests passing).
+
+## Current milestone: Phase 9 — Dashboard and quality
+
+- [ ] Add dashboard summary aggregate endpoints based on real database data.
+- [ ] Optimize queries and verify async execution and cancellation tokens.
+- [ ] Review validation, error responses, structured logging, and sensitive data safeguards.
+- [ ] Add end-to-end integration tests for dashboard metrics against verified test data.
 
 ## Upcoming milestones
 
-- [ ] Phase 9: dashboard, quality, and integration tests.
 - [ ] Phase 10: README, GitHub, deployment readiness.
 - [ ] Phase 11: optional frontend.
 
 ## Current next action
 
-Phase 8 Expense Management: Implement expense repository, DTOs, service, review/approval workflow, and endpoints with domain validations in `BusinessOperations.Application`, `BusinessOperations.Infrastructure`, and `BusinessOperations.API`.
+Phase 9 Dashboard & Quality: Implement organizational dashboard summary DTOs, metrics queries, service, and endpoints (`GET /api/dashboard/summary`) with automated verification in `BusinessOperations.Application`, `BusinessOperations.API`, and `BusinessOperations.IntegrationTests`.
 
 ## Completion rule
 

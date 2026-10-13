@@ -77,7 +77,8 @@ As of 2026-10-13:
 - Departments & Employee Profiles (Phase 5): **Confirmed implemented & verified** (`DepartmentsController`, `EmployeesController`, pagination/search, role barriers, tamper protection)
 - Leave Management (Phase 6): **Confirmed implemented & verified** (`LeaveRequestsController`, submission, overlap check, balance deduction, approval/rejection lifecycle, self-approval prevention)
 - Task Management (Phase 7): **Confirmed implemented & verified** (`TasksController`, assignment, state machine transitions, cancellation guards)
-- Tests: **Confirmed passing** (73 tests total: 25 unit tests, 48 integration tests)
-- Current Phase: **Phase 8 — Expense Management**
+- Expense Management (Phase 8): **Confirmed implemented & verified** (`ExpensesController`, amount/category validations, review workflow, self-approval prevention)
+- Tests: **Confirmed passing** (84 tests total: 25 unit tests, 59 integration tests)
+- Current Phase: **Phase 9 — Dashboard and Quality**
 
 Never describe unverified work as completed. Update this file when verified facts change.

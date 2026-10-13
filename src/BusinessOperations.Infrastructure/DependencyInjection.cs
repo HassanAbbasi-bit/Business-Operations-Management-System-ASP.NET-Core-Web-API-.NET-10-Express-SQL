@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IDepartmentRepository, Repositories.DepartmentRepository>();
         services.AddScoped<ILeaveRequestRepository, Repositories.LeaveRequestRepository>();
         services.AddScoped<ITaskItemRepository, Repositories.TaskItemRepository>();
+        services.AddScoped<IExpenseRepository, Repositories.ExpenseRepository>();
         services.AddScoped<IUnitOfWork, Repositories.UnitOfWork>();
 
         services.AddSingleton<IPasswordHasher, Services.PasswordHasher>();

@@ -91,12 +91,12 @@
 
 ## Phase 8 — Expense management
 
-- [ ] Submit expense with amount, category, expense date, and description.
-- [ ] Validate amount and required fields.
-- [ ] Review/approve/reject expenses with audit fields.
-- [ ] Prevent unauthorized review and self-approval.
-- [ ] Add pagination/filtering and tests.
-**Gate:** expense workflow tests pass.
+- [x] Submit expense with amount, category, expense date, currency, and description (`POST /api/expenses`).
+- [x] Validate amount (>0) and required fields.
+- [x] Review/approve/reject expenses with audit fields (`POST /api/expenses/{id}/approve`, `POST /api/expenses/{id}/reject`).
+- [x] Prevent unauthorized review and self-approval (`reviewer.Id != expense.EmployeeId`).
+- [x] Add pagination/filtering and tests (`ExpensesEndpointTests.cs`).
+**Gate:** expense workflow tests pass. (Gate Passed: verified with 84 total passing tests: 25 unit, 59 integration).
 
 ## Phase 9 — Dashboard and quality
 
