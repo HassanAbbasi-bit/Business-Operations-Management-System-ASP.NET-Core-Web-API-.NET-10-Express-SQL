@@ -480,3 +480,22 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Defense-in-depth: Secrets, Certificates, and Local Config
+appsettings.Production.json
+appsettings.*.local.json
+appsettings.Local.json
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+*.cer
+secrets.json
+
+# Frontend dependencies and build outputs
+**/node_modules/
+**/dist/
+**/dist-ssr/
+frontend/.env*.local
+

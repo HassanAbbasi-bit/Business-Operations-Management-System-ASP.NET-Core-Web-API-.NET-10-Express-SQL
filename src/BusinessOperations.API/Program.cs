@@ -13,8 +13,34 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Configure JWT Authentication
-var jwtSecret = builder.Configuration["JwtSettings:Secret"]
-    ?? "BusinessOperations_Very_Secure_Development_Secret_Key_At_Least_32_Chars!";
+const string DevelopmentFallbackSecret = "BusinessOperations_Very_Secure_Development_Secret_Key_At_Least_32_Chars!";
+var configuredSecret = builder.Configuration["JwtSettings:Secret"];
+
+if (builder.Environment.IsProduction())
+{
+    if (string.IsNullOrWhiteSpace(configuredSecret) ||
+        configuredSecret.Length < 32 ||
+        configuredSecret.Contains("Development_Secret_Key", StringComparison.OrdinalIgnoreCase) ||
+        configuredSecret.Contains("placeholder", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(configuredSecret, DevelopmentFallbackSecret, StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "CRITICAL SECURITY CONFIGURATION ERROR: A valid production JWT signing key (at least 32 characters) must be configured in Production. " +
+            "Development placeholder keys are strictly rejected in Production. Configure 'JwtSettings:Secret' via environment variables or a secret vault.");
+    }
+}
+
+var jwtSecret = configuredSecret;
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "CRITICAL SECURITY CONFIGURATION ERROR: JWT signing key is not configured. Fallback development secret is only permitted in Development environment.");
+    }
+    jwtSecret = DevelopmentFallbackSecret;
+}
+
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "BusinessOperationsApi";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "BusinessOperationsClient";
 
