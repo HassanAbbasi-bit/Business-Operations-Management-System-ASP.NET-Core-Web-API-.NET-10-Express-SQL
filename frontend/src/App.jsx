@@ -29,7 +29,7 @@ export default function App() {
   // Auth modal
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
-  const [authForm, setAuthForm] = useState({ username: '', email: '', password: '', role: 'Employee' });
+  const [authForm, setAuthForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'Employee' });
 
   // Dashboard Data
   const [summaryData, setSummaryData] = useState(null);
@@ -188,16 +188,23 @@ export default function App() {
   // Auth Actions
   const handleLogin = async (e, demoCreds = null) => {
     if (e) e.preventDefault();
-    const identifier = demoCreds ? demoCreds.username : authForm.username;
+    const identifier = demoCreds ? demoCreds.username : authForm.email;
     const password = demoCreds ? demoCreds.password : authForm.password;
 
     try {
       const res = await api.auth.login(identifier, password);
       setAuthToken(res.token);
-      setSavedUser(res.user);
-      setCurrentUser(res.user);
+      const userObj = {
+        id: res.userId,
+        email: res.email,
+        role: res.role,
+        employeeId: res.employeeId,
+        username: res.email.split('@')[0]
+      };
+      setSavedUser(userObj);
+      setCurrentUser(userObj);
       setShowAuthModal(false);
-      showToast(`Welcome back, ${res.user.username} (${res.user.role})!`);
+      showToast(`Welcome back, ${userObj.username} (${userObj.role})!`);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -206,17 +213,26 @@ export default function App() {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
+      const roleMap = { Admin: 3, Manager: 2, Employee: 1 };
       const res = await api.auth.register({
-        username: authForm.username,
-        email: authForm.email,
+        firstName: authForm.firstName.trim() || 'Staff',
+        lastName: authForm.lastName.trim() || 'Member',
+        email: authForm.email.trim(),
         password: authForm.password,
-        role: authForm.role
+        role: roleMap[authForm.role] || 1
       });
       setAuthToken(res.token);
-      setSavedUser(res.user);
-      setCurrentUser(res.user);
+      const userObj = {
+        id: res.userId,
+        email: res.email,
+        role: res.role,
+        employeeId: res.employeeId,
+        username: res.email.split('@')[0]
+      };
+      setSavedUser(userObj);
+      setCurrentUser(userObj);
       setShowAuthModal(false);
-      showToast(`Account registered successfully as ${res.user.role}!`);
+      showToast(`Account registered successfully as ${userObj.role}!`);
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -1100,45 +1116,79 @@ export default function App() {
             <div className="demo-accounts">
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'admin', password: 'Admin123!' })}
+                onClick={() => handleLogin(null, { username: 'admin@operix.com', password: 'Admin123!' })}
               >
                 <ShieldCheck size={20} color="#818cf8" />
                 <span className="demo-role">Admin</span>
-                <span className="demo-cred">admin</span>
+                <span className="demo-cred">admin@operix.com</span>
               </div>
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'manager', password: 'Manager123!' })}
+                onClick={() => handleLogin(null, { username: 'manager@operix.com', password: 'Manager123!' })}
               >
                 <UserCheck size={20} color="#22d3ee" />
                 <span className="demo-role">Manager</span>
-                <span className="demo-cred">manager</span>
+                <span className="demo-cred">manager@operix.com</span>
               </div>
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'employee', password: 'Employee123!' })}
+                onClick={() => handleLogin(null, { username: 'employee@operix.com', password: 'Employee123!' })}
               >
                 <Users size={20} color="#34d399" />
                 <span className="demo-role">Employee</span>
-                <span className="demo-cred">employee</span>
+                <span className="demo-cred">employee@operix.com</span>
               </div>
             </div>
 
             {/* Form */}
             <form onSubmit={authMode === 'login' ? handleLogin : handleRegister}>
-              <div className="form-group">
-                <label>Username</label>
-                <input
-                  type="text"
-                  required
-                  value={authForm.username}
-                  onChange={(e) => setAuthForm({ ...authForm, username: e.target.value })}
-                  placeholder="e.g. admin"
-                />
-              </div>
-
-              {authMode === 'register' && (
+              {authMode === 'login' ? (
                 <>
+                  <div className="form-group">
+                    <label>Email Address or Username</label>
+                    <input
+                      type="text"
+                      required
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                      placeholder="e.g. admin@operix.com or admin"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={authForm.firstName}
+                        onChange={(e) => setAuthForm({ ...authForm, firstName: e.target.value })}
+                        placeholder="e.g. Jane"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Last Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={authForm.lastName}
+                        onChange={(e) => setAuthForm({ ...authForm, lastName: e.target.value })}
+                        placeholder="e.g. Doe"
+                      />
+                    </div>
+                  </div>
                   <div className="form-group">
                     <label>Email Address</label>
                     <input
@@ -1150,29 +1200,31 @@ export default function App() {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Role</label>
+                    <label>Account Role</label>
                     <select
                       value={authForm.role}
                       onChange={(e) => setAuthForm({ ...authForm, role: e.target.value })}
                     >
-                      <option value="Employee">Employee</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Admin">Admin</option>
+                      <option value="Employee">Employee (Staff Member)</option>
+                      <option value="Manager">Manager (Team Reviewer)</option>
+                      <option value="Admin">Admin (System Administrator)</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                      placeholder="Min 8 chars (e.g. SecurePass123!)"
+                    />
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
+                      Requirements: 8+ characters, with uppercase, lowercase, number, and symbol (!?*@#$%^&+=).
+                    </span>
                   </div>
                 </>
               )}
-
-              <div className="form-group">
-                <label>Password</label>
-                <input
-                  type="password"
-                  required
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                  placeholder="••••••••"
-                />
-              </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
                 <span
@@ -1182,7 +1234,7 @@ export default function App() {
                   {authMode === 'login' ? 'Need an account? Register' : 'Already have an account? Sign In'}
                 </span>
                 <button type="submit" className="btn-primary">
-                  {authMode === 'login' ? 'Sign In' : 'Register'}
+                  {authMode === 'login' ? 'Sign In' : 'Register Account'}
                 </button>
               </div>
             </form>

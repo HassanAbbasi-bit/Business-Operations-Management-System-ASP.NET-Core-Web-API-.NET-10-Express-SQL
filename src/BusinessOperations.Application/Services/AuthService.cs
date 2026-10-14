@@ -52,7 +52,8 @@ public class AuthService : IAuthService
         }
 
         string passwordHash = _passwordHasher.HashPassword(request.Password);
-        var user = new User(normalizedEmail, passwordHash, UserRole.Employee);
+        var role = request.Role ?? UserRole.Employee;
+        var user = new User(normalizedEmail, passwordHash, role);
         await _userRepository.AddAsync(user, cancellationToken);
 
         Employee? employee = null;
@@ -93,7 +94,18 @@ public class AuthService : IAuthService
             throw new DomainException(firstError);
         }
 
-        string normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        string rawIdentifier = !string.IsNullOrWhiteSpace(request.Email)
+            ? request.Email.Trim()
+            : (request.UsernameOrEmail?.Trim() ?? string.Empty);
+
+        string normalizedEmail = rawIdentifier.ToLowerInvariant() switch
+        {
+            "admin" => "admin@operix.com",
+            "manager" => "manager@operix.com",
+            "employee" => "employee@operix.com",
+            _ => rawIdentifier.ToLowerInvariant()
+        };
+
         var user = await _userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
 
         if (user == null || !user.IsActive)

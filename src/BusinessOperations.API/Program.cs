@@ -108,6 +108,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Seed demonstration data in Development
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<BusinessOperations.Infrastructure.Data.ApplicationDbContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<BusinessOperations.Application.Interfaces.IPasswordHasher>();
+    await BusinessOperations.Infrastructure.Data.DatabaseSeeder.SeedAsync(dbContext, passwordHasher);
+}
+
 app.Run();
 
 public partial class Program { }

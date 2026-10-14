@@ -62,10 +62,14 @@ export const api = {
 
   // Auth
   auth: {
-    login: (usernameOrEmail, password) =>
+    login: (identifier, password) =>
       request('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ usernameOrEmail, password }),
+        body: JSON.stringify({
+          email: identifier,
+          usernameOrEmail: identifier,
+          password,
+        }),
       }),
     register: (userData) =>
       request('/auth/register', {
