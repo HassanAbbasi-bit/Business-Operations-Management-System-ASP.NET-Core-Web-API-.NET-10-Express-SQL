@@ -66,6 +66,44 @@ const formatExpenseCategory = (val) => {
   return String(val);
 };
 
+const TASK_STATUS_MAP = {
+  1: 'Todo',
+  2: 'InProgress',
+  3: 'InReview',
+  4: 'Done',
+  5: 'Cancelled'
+};
+
+const TASK_PRIORITY_MAP = {
+  0: 'Low',
+  1: 'Medium',
+  2: 'High',
+  3: 'Urgent',
+  4: 'Critical'
+};
+
+const normalizeTaskStatus = (s) => {
+  if (typeof s === 'number') return TASK_STATUS_MAP[s] || 'Todo';
+  return s || 'Todo';
+};
+
+const normalizeTaskPriority = (p) => {
+  if (typeof p === 'number') return TASK_PRIORITY_MAP[p] || 'Medium';
+  return p || 'Medium';
+};
+
+const isTestDepartment = (dept) => {
+  const name = dept?.name || '';
+  return name.startsWith('BogusDept_') || name.startsWith('Dept_') || name.startsWith('TaskDept_') || name.startsWith('LeaveDept_') || name.startsWith('ExpDept_');
+};
+
+const isTestEmployee = (emp) => {
+  const email = (emp?.email || '').toLowerCase();
+  const first = (emp?.firstName || '').toLowerCase();
+  const last = (emp?.lastName || '').toLowerCase();
+  return email.endsWith('@test.com') || email.includes('dupe_emp_') || (first === 'bob' && last === 'builder');
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(getSavedUser());
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -91,6 +129,7 @@ export default function App() {
   const [employees, setEmployees] = useState([]);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeDeptFilter, setEmployeeDeptFilter] = useState('');
+  const [hideTestFixtures, setHideTestFixtures] = useState(true);
 
   // Leaves
   const [myLeaves, setMyLeaves] = useState([]);
@@ -231,12 +270,16 @@ export default function App() {
 
   const loadTasks = async () => {
     try {
-      const res = await api.tasks.list({
-        pageSize: 50,
+      const params = {
+        pageSize: 100,
         status: taskFilterStatus || undefined,
         priority: taskFilterPriority || undefined,
         search: taskSearch || undefined
-      });
+      };
+      if (currentUser?.role === 'Employee' && personalData?.employeeId) {
+        params.assignedToId = personalData.employeeId;
+      }
+      const res = await api.tasks.list(params);
       setTasks(res.items || []);
     } catch (e) { console.error(e); }
   };
@@ -258,7 +301,7 @@ export default function App() {
     if (currentUser) {
       loadTasks();
     }
-  }, [currentUser, taskFilterStatus, taskFilterPriority, taskSearch]);
+  }, [currentUser, personalData?.employeeId, taskFilterStatus, taskFilterPriority, taskSearch]);
 
   // Demo account population (does NOT auto-login, requires explicit Sign In click)
   const fillDemoCredentials = (email, password) => {
@@ -478,6 +521,19 @@ export default function App() {
     }
   };
 
+  const isLeaveDateConflicted = (startStr, endStr) => {
+    if (!startStr || !endStr) return false;
+    const s = new Date(startStr);
+    const e = new Date(endStr);
+    return myLeaves.some((lr) => {
+      const status = formatLeaveStatus(lr.status);
+      if (status !== 'Pending' && status !== 'Approved') return false;
+      const lrS = new Date(lr.startDate);
+      const lrE = new Date(lr.endDate);
+      return s <= lrE && e >= lrS;
+    });
+  };
+
   const handleApplyLeave = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -495,6 +551,12 @@ export default function App() {
       return;
     }
 
+    if (isLeaveDateConflicted(newLeaveForm.startDate, newLeaveForm.endDate)) {
+      setModalError('Employee already has an active or pending leave request covering these dates. Please choose different dates.');
+      showToast('Selected dates conflict with an existing leave request.', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
     setModalError('');
     try {
@@ -506,8 +568,8 @@ export default function App() {
       showToast('Time-off request submitted!');
       setModalOpen(null);
       setNewLeaveForm({
-        startDate: getTodayDate(),
-        endDate: getFutureDate(3),
+        startDate: getFutureDate(7),
+        endDate: getFutureDate(10),
         reason: ''
       });
       loadLeaves();
@@ -709,6 +771,7 @@ export default function App() {
   };
 
   const filteredEmployees = employees.filter((emp) => {
+    if (hideTestFixtures && isTestEmployee(emp)) return false;
     const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toLowerCase();
     const email = (emp.email || '').toLowerCase();
     const deptName = (emp.departmentName || '').toLowerCase();
@@ -723,11 +786,15 @@ export default function App() {
   });
 
   const filteredDepartments = departments.filter((dept) => {
+    if (hideTestFixtures && isTestDepartment(dept)) return false;
     const name = (dept.name || '').toLowerCase();
     const mgr = (dept.managerName || '').toLowerCase();
     const search = deptSearch.toLowerCase().trim();
     return !search || name.includes(search) || mgr.includes(search);
   });
+
+  const assignableEmployees = employees.filter((emp) => !hideTestFixtures || !isTestEmployee(emp));
+  const testDeptCount = departments.filter(isTestDepartment).length;
 
   return (
     <div className="app-container">
@@ -815,73 +882,157 @@ export default function App() {
           <div>
             <div className="page-header">
               <div>
-                <h1 className="page-title">Operations Command Center</h1>
-                <p className="page-subtitle">Real-time organizational performance metrics, workflows, and workforce telemetry.</p>
+                <h1 className="page-title">
+                  {currentUser?.role === 'Admin'
+                    ? 'Executive Operations Command Center'
+                    : currentUser?.role === 'Manager'
+                    ? 'Operations Command Center'
+                    : 'Employee Workspace'}
+                </h1>
+                <p className="page-subtitle">
+                  {currentUser?.role === 'Admin'
+                    ? 'Real-time organizational performance metrics, workflows, and workforce telemetry.'
+                    : currentUser?.role === 'Manager'
+                    ? 'Departmental throughput, team deliverables, and operational telemetry.'
+                    : 'Your active deliverables, leave allowances, and personal expenditure telemetry.'}
+                </p>
               </div>
               <div className="header-actions">
-                <button className="btn-primary" onClick={() => setModalOpen('task')}>
-                  <Plus size={16} /> New Task
-                </button>
-                <button className="btn-secondary" onClick={() => setModalOpen('leave')}>
-                  <Plus size={16} /> Apply Time Off
-                </button>
-                <button className="btn-secondary" onClick={() => setModalOpen('expense')}>
-                  <Plus size={16} /> Claim Expense
-                </button>
+                {currentUser?.role === 'Admin' && (
+                  <>
+                    <button className="btn-primary" onClick={() => setModalOpen('task')}>
+                      <Plus size={16} /> Create Task
+                    </button>
+                    <button className="btn-secondary" onClick={() => setModalOpen('employee')}>
+                      <Plus size={16} /> Add Employee
+                    </button>
+                    <button className="btn-secondary" onClick={() => setModalOpen('dept')}>
+                      <Plus size={16} /> Add Department
+                    </button>
+                  </>
+                )}
+                {currentUser?.role === 'Manager' && (
+                  <>
+                    <button className="btn-primary" onClick={() => setModalOpen('task')}>
+                      <Plus size={16} /> Create Task
+                    </button>
+                    <button className="btn-secondary" onClick={() => setModalOpen('leave')}>
+                      <Plus size={16} /> Apply Time Off
+                    </button>
+                    <button className="btn-secondary" onClick={() => setModalOpen('expense')}>
+                      <Plus size={16} /> Claim Expense
+                    </button>
+                  </>
+                )}
+                {currentUser?.role === 'Employee' && (
+                  <>
+                    <button className="btn-primary" onClick={() => setModalOpen('leave')}>
+                      <Plus size={16} /> Apply Time Off
+                    </button>
+                    <button className="btn-secondary" onClick={() => setModalOpen('expense')}>
+                      <Plus size={16} /> Claim Expense
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Executive Summary Stats */}
-            {summaryData ? (
+            {/* Executive Summary Stats (Admin & Manager) */}
+            {(currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+              summaryData ? (
+                <div className="stats-grid">
+                  <div className="glass-card stat-card">
+                    <div className="stat-icon indigo"><Users size={26} /></div>
+                    <div className="stat-content">
+                      <span className="stat-label">Active Employees</span>
+                      <span className="stat-value">{summaryData.totalEmployees ?? summaryData.activeEmployees ?? 0}</span>
+                      <span className="stat-sub">Across {summaryData.totalDepartments ?? departments.length} Departments</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card stat-card">
+                    <div className="stat-icon cyan"><CheckSquare size={26} /></div>
+                    <div className="stat-content">
+                      <span className="stat-label">Active Tasks</span>
+                      <span className="stat-value">
+                        {(summaryData.todoTasks || 0) + (summaryData.inProgressTasks || 0) + (summaryData.inReviewTasks || 0)}
+                      </span>
+                      <span className="stat-sub">{summaryData.completedTasks ?? 0} completed</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card stat-card">
+                    <div className="stat-icon emerald"><CalendarDays size={26} /></div>
+                    <div className="stat-content">
+                      <span className="stat-label">Pending Leaves</span>
+                      <span className="stat-value">{summaryData.pendingLeaveRequests ?? summaryData.totalPendingLeaves ?? 0}</span>
+                      <span className="stat-sub">{summaryData.approvedLeaveRequests ?? summaryData.totalApprovedLeaves ?? 0} approved YTD</span>
+                    </div>
+                  </div>
+
+                  <div className="glass-card stat-card">
+                    <div className="stat-icon amber"><Receipt size={26} /></div>
+                    <div className="stat-content">
+                      <span className="stat-label">Pending Expenses</span>
+                      <span className="stat-value">${Number(summaryData.totalPendingExpensesAmount ?? 0).toFixed(2)}</span>
+                      <span className="stat-sub">${Number(summaryData.totalApprovedExpensesAmount ?? 0).toFixed(2)} approved</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="glass-card" style={{ marginBottom: '2rem', padding: '1.25rem', textAlign: 'center' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Loading executive telemetry...</span>
+                </div>
+              )
+            )}
+
+            {/* Employee Role Personal Workspace Stats */}
+            {currentUser?.role === 'Employee' && (
               <div className="stats-grid">
                 <div className="glass-card stat-card">
-                  <div className="stat-icon indigo"><Users size={26} /></div>
+                  <div className="stat-icon emerald"><CalendarDays size={26} /></div>
                   <div className="stat-content">
-                    <span className="stat-label">Active Employees</span>
-                    <span className="stat-value">{summaryData.activeEmployees}</span>
-                    <span className="stat-sub">Across {summaryData.totalDepartments} Departments</span>
+                    <span className="stat-label">Annual Leave Balance</span>
+                    <span className="stat-value">{personalData?.annualLeaveBalanceDays ?? 20}</span>
+                    <span className="stat-sub">Paid days remaining</span>
                   </div>
                 </div>
 
                 <div className="glass-card stat-card">
                   <div className="stat-icon cyan"><CheckSquare size={26} /></div>
                   <div className="stat-content">
-                    <span className="stat-label">Active Tasks</span>
+                    <span className="stat-label">My Assigned Tasks</span>
                     <span className="stat-value">
-                      {(summaryData.tasksByStatus?.inProgress || 0) + (summaryData.tasksByStatus?.todo || 0) + (summaryData.tasksByStatus?.inReview || 0)}
+                      {tasks.filter((t) => normalizeTaskStatus(t.status) !== 'Done' && normalizeTaskStatus(t.status) !== 'Cancelled').length}
                     </span>
-                    <span className="stat-sub">{summaryData.tasksByStatus?.done || 0} completed</span>
+                    <span className="stat-sub">{tasks.filter((t) => normalizeTaskStatus(t.status) === 'Done').length} completed</span>
                   </div>
                 </div>
 
                 <div className="glass-card stat-card">
-                  <div className="stat-icon emerald"><CalendarDays size={26} /></div>
+                  <div className="stat-icon indigo"><CalendarDays size={26} /></div>
                   <div className="stat-content">
-                    <span className="stat-label">Pending Leaves</span>
-                    <span className="stat-value">{summaryData.totalPendingLeaves}</span>
-                    <span className="stat-sub">{summaryData.totalApprovedLeaves} approved YTD</span>
+                    <span className="stat-label">My Leave Requests</span>
+                    <span className="stat-value">{myLeaves.filter((l) => formatLeaveStatus(l.status) === 'Pending').length}</span>
+                    <span className="stat-sub">Pending supervisor review</span>
                   </div>
                 </div>
 
                 <div className="glass-card stat-card">
                   <div className="stat-icon amber"><Receipt size={26} /></div>
                   <div className="stat-content">
-                    <span className="stat-label">Pending Expenses</span>
-                    <span className="stat-value">${Number(summaryData.totalPendingExpensesAmount).toFixed(2)}</span>
-                    <span className="stat-sub">${Number(summaryData.totalApprovedExpensesAmount).toFixed(2)} approved</span>
+                    <span className="stat-label">My Pending Reimbursements</span>
+                    <span className="stat-value">
+                      ${myExpenses.filter((e) => formatExpenseStatus(e.status) === 'Pending').reduce((s, e) => s + Number(e.amount || 0), 0).toFixed(2)}
+                    </span>
+                    <span className="stat-sub">{myExpenses.filter((e) => formatExpenseStatus(e.status) === 'Pending').length} claims in review</span>
                   </div>
                 </div>
               </div>
-            ) : (
-              <div className="glass-card" style={{ marginBottom: '2rem', padding: '1.25rem', textAlign: 'center' }}>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {currentUser ? 'Executive metrics available for Manager/Admin roles' : 'Sign in to view executive dashboard metrics'}
-                </span>
-              </div>
             )}
 
-            {/* Personal Workspace Widget */}
-            {personalData && (
+            {/* Manager / Admin Personal Profile Widget (if available) */}
+            {currentUser?.role !== 'Employee' && personalData && (
               <div className="glass-card" style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -891,7 +1042,7 @@ export default function App() {
                     <div>
                       <h3 style={{ fontSize: '1.15rem' }}>{personalData.fullName}</h3>
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {personalData.jobTitle} • {personalData.departmentName || 'Operations'}
+                        {currentUser.role} • {personalData.departmentName || 'Operations'}
                       </p>
                     </div>
                   </div>
@@ -899,7 +1050,7 @@ export default function App() {
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Annual Leave Balance</span>
                       <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#34d399' }}>
-                        {personalData.remainingLeaveDays} <span style={{ fontSize: '0.85rem' }}>Days Left</span>
+                        {personalData.annualLeaveBalanceDays ?? 0} <span style={{ fontSize: '0.85rem' }}>Days Left</span>
                       </div>
                     </div>
                   </div>
@@ -907,24 +1058,73 @@ export default function App() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Assigned Tasks</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Assigned Deliverables</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      {(personalData.assignedTasksByStatus?.inProgress || 0) + (personalData.assignedTasksByStatus?.todo || 0)} In Flight
+                      {(personalData.inProgressTasksCount || 0) + (personalData.assignedTasksCount || 0)} In Flight
                     </div>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pending Leave Requests</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      {personalData.pendingLeaveRequestsCount} Pending
+                      {personalData.pendingLeaveRequests ?? 0} Pending
                     </div>
                   </div>
                   <div>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Expense Claims</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      ${Number(personalData.pendingExpenseReimbursementsTotal || 0).toFixed(2)} Pending
+                      ${Number(personalData.totalPendingExpensesAmount ?? 0).toFixed(2)} Pending
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Employee Active Assignments Showcase */}
+            {currentUser?.role === 'Employee' && (
+              <div style={{ marginTop: '2rem' }}>
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>My Active Assignments</h3>
+                {tasks.filter((t) => normalizeTaskStatus(t.status) !== 'Done' && normalizeTaskStatus(t.status) !== 'Cancelled').length === 0 ? (
+                  <div className="glass-card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    You currently have no tasks in flight. All deliverables are complete!
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+                    {tasks
+                      .filter((t) => normalizeTaskStatus(t.status) !== 'Done' && normalizeTaskStatus(t.status) !== 'Cancelled')
+                      .slice(0, 6)
+                      .map((t) => (
+                        <div key={t.id} className="task-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span className={`badge badge-${normalizeTaskPriority(t.priority).toLowerCase()}`}>
+                              {normalizeTaskPriority(t.priority)}
+                            </span>
+                            <span className={`badge badge-${normalizeTaskStatus(t.status).toLowerCase()}`}>
+                              {normalizeTaskStatus(t.status)}
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginTop: '0.5rem' }}>{t.title}</h4>
+                          {t.description && (
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.description}</p>
+                          )}
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.5rem' }}>
+                            Due: {t.dueDate?.split('T')[0] || 'No date set'}
+                          </div>
+                          <div className="task-actions" style={{ marginTop: '0.75rem' }}>
+                            {normalizeTaskStatus(t.status) === 'Todo' && (
+                              <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'start')}>
+                                Start Task
+                              </button>
+                            )}
+                            {normalizeTaskStatus(t.status) === 'InProgress' && (
+                              <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'review')}>
+                                Submit Review
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -954,8 +1154,20 @@ export default function App() {
 
             {/* Department Cards */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Departments Overview ({departments.length})</h3>
-              {departments.length > 4 && (
+              <h3 style={{ fontSize: '1.1rem', margin: 0 }}>
+                Departments Overview ({filteredDepartments.length})
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                {testDeptCount > 0 && (
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={hideTestFixtures}
+                      onChange={(e) => setHideTestFixtures(e.target.checked)}
+                    />
+                    Hide test fixtures ({testDeptCount} items)
+                  </label>
+                )}
                 <input
                   type="text"
                   className="search-input"
@@ -964,7 +1176,7 @@ export default function App() {
                   value={deptSearch}
                   onChange={(e) => setDeptSearch(e.target.value)}
                 />
-              )}
+              </div>
             </div>
 
             <div className="dept-grid">
@@ -1167,22 +1379,28 @@ export default function App() {
                           <td><span className="badge badge-inprogress">{lr.daysCount} Days</span></td>
                           <td>{lr.reason}</td>
                           <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="btn-success btn-sm" onClick={() => handleApproveLeave(lr.id)}>
-                                <CheckCircle2 size={14} /> Approve
-                              </button>
-                              <button
-                                className="btn-danger btn-sm"
-                                onClick={() => {
-                                  setRejectTargetId(lr.id);
-                                  setRejectionReason('');
-                                  setModalError('');
-                                  setModalOpen('rejectLeave');
-                                }}
-                              >
-                                <XCircle size={14} /> Reject
-                              </button>
-                            </div>
+                            {lr.employeeId === personalData?.employeeId || (personalData?.fullName && lr.employeeName === personalData.fullName) ? (
+                              <span className="badge badge-pending" title="Self-approval prohibited by internal controls">
+                                Self-Submission
+                              </span>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn-success btn-sm" onClick={() => handleApproveLeave(lr.id)}>
+                                  <CheckCircle2 size={14} /> Approve
+                                </button>
+                                <button
+                                  className="btn-danger btn-sm"
+                                  onClick={() => {
+                                    setRejectTargetId(lr.id);
+                                    setRejectionReason('');
+                                    setModalError('');
+                                    setModalOpen('rejectLeave');
+                                  }}
+                                >
+                                  <XCircle size={14} /> Reject
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -1238,7 +1456,7 @@ export default function App() {
             {/* Kanban Columns */}
             <div className="kanban-board">
               {['Todo', 'InProgress', 'InReview', 'Done'].map((colStatus) => {
-                const colTasks = tasks.filter((t) => t.status === colStatus);
+                const colTasks = tasks.filter((t) => normalizeTaskStatus(t.status) === colStatus);
                 return (
                   <div key={colStatus} className="kanban-col">
                     <div className="kanban-col-header">
@@ -1251,56 +1469,60 @@ export default function App() {
                         No tasks in {colStatus}
                       </div>
                     ) : (
-                      colTasks.map((t) => (
-                        <div key={t.id} className="task-card">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span className={`badge badge-${t.priority.toLowerCase()}`}>{t.priority}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                              Due: {t.dueDate?.split('T')[0] || 'No date'}
-                            </span>
-                          </div>
-                          <h4 style={{ fontSize: '0.95rem', fontWeight: 600 }}>{t.title}</h4>
-                          {t.description && (
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.description}</p>
-                          )}
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                            Assignee: {t.assigneeName || 'Unassigned'}
-                          </div>
+                      colTasks.map((t) => {
+                        const statusStr = normalizeTaskStatus(t.status);
+                        const priorityStr = normalizeTaskPriority(t.priority);
+                        return (
+                          <div key={t.id} className="task-card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span className={`badge badge-${priorityStr.toLowerCase()}`}>{priorityStr}</span>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Due: {t.dueDate?.split('T')[0] || 'No date'}
+                              </span>
+                            </div>
+                            <h4 style={{ fontSize: '0.95rem', fontWeight: 600 }}>{t.title}</h4>
+                            {t.description && (
+                              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.description}</p>
+                            )}
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                              Assignee: {t.assigneeName || 'Unassigned'}
+                            </div>
 
-                          {/* Lifecycle State Actions */}
-                          <div className="task-actions">
-                            {t.status === 'Todo' && (
-                              <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'start')}>
-                                Start Task
-                              </button>
-                            )}
-                            {t.status === 'InProgress' && (
-                              <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'review')}>
-                                Submit Review
-                              </button>
-                            )}
-                            {t.status === 'InReview' && (
-                              <>
-                                <button className="btn-success btn-sm" onClick={() => handleTaskAction(t.id, 'complete')}>
-                                  Complete
+                            {/* Lifecycle State Actions */}
+                            <div className="task-actions">
+                              {statusStr === 'Todo' && (
+                                <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'start')}>
+                                  Start Task
                                 </button>
-                                <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'requestChanges')}>
-                                  Req. Changes
+                              )}
+                              {statusStr === 'InProgress' && (
+                                <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'review')}>
+                                  Submit Review
                                 </button>
-                              </>
-                            )}
-                            {t.status !== 'Done' && t.status !== 'Cancelled' && (
-                              <button
-                                className="btn-danger btn-sm"
-                                style={{ marginLeft: 'auto' }}
-                                onClick={() => handleTaskAction(t.id, 'cancel')}
-                              >
-                                Cancel
-                              </button>
-                            )}
+                              )}
+                              {statusStr === 'InReview' && (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+                                <>
+                                  <button className="btn-success btn-sm" onClick={() => handleTaskAction(t.id, 'complete')}>
+                                    Complete
+                                  </button>
+                                  <button className="btn-secondary btn-sm" onClick={() => handleTaskAction(t.id, 'requestChanges')}>
+                                    Req. Changes
+                                  </button>
+                                </>
+                              )}
+                              {statusStr !== 'Done' && statusStr !== 'Cancelled' && (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+                                <button
+                                  className="btn-danger btn-sm"
+                                  style={{ marginLeft: 'auto' }}
+                                  onClick={() => handleTaskAction(t.id, 'cancel')}
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 );
@@ -1408,22 +1630,28 @@ export default function App() {
                           <td>{exp.description}</td>
                           <td style={{ fontFamily: 'var(--font-mono)' }}>{(exp.expenseDate || '').split('T')[0] || exp.expenseDate || '—'}</td>
                           <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="btn-success btn-sm" onClick={() => handleApproveExpense(exp.id)}>
-                                <CheckCircle2 size={14} /> Approve
-                              </button>
-                              <button
-                                className="btn-danger btn-sm"
-                                onClick={() => {
-                                  setRejectTargetId(exp.id);
-                                  setRejectionReason('');
-                                  setModalError('');
-                                  setModalOpen('rejectExpense');
-                                }}
-                              >
-                                <XCircle size={14} /> Reject
-                              </button>
-                            </div>
+                            {exp.employeeId === personalData?.employeeId || (personalData?.fullName && exp.employeeName === personalData.fullName) ? (
+                              <span className="badge badge-pending" title="Self-approval prohibited by internal controls">
+                                Self-Submission
+                              </span>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button className="btn-success btn-sm" onClick={() => handleApproveExpense(exp.id)}>
+                                  <CheckCircle2 size={14} /> Approve
+                                </button>
+                                <button
+                                  className="btn-danger btn-sm"
+                                  onClick={() => {
+                                    setRejectTargetId(exp.id);
+                                    setRejectionReason('');
+                                    setModalError('');
+                                    setModalOpen('rejectExpense');
+                                  }}
+                                >
+                                  <XCircle size={14} /> Reject
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -1875,9 +2103,19 @@ export default function App() {
                   onChange={(e) => setNewLeaveForm({ ...newLeaveForm, reason: e.target.value })}
                 />
               </div>
+              {isLeaveDateConflicted(newLeaveForm.startDate, newLeaveForm.endDate) && (
+                <div className="form-banner-error" role="alert" style={{ marginBottom: '1rem' }}>
+                  <AlertCircle size={16} />
+                  <span>These dates overlap with an active or pending leave request in your records.</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isSubmitting || isLeaveDateConflicted(newLeaveForm.startDate, newLeaveForm.endDate)}
+                >
                   {isSubmitting && <span className="btn-spinner" />}
                   {isSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>
@@ -1950,7 +2188,7 @@ export default function App() {
                   onChange={(e) => setNewTaskForm({ ...newTaskForm, assignedToEmployeeId: e.target.value })}
                 >
                   <option value="">Unassigned</option>
-                  {employees.map((emp) => (
+                  {assignableEmployees.map((emp) => (
                     <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.departmentName || 'Staff'})</option>
                   ))}
                 </select>
