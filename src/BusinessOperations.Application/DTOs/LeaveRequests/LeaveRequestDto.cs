@@ -17,5 +17,6 @@ public class LeaveRequestDto
     public string? ReviewedByEmployeeName { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
     public string? ReviewNotes { get; set; }
+    public string? RejectionReason => ReviewNotes;
     public DateTime CreatedAtUtc { get; set; }
 }

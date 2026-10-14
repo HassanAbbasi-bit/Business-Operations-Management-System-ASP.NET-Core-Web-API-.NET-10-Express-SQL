@@ -153,4 +153,41 @@ public class DashboardEndpointTests : IClassFixture<WebApplicationFactory<Progra
         Assert.True(personal.TotalPendingExpensesAmount >= 45.00m);
         Assert.True(personal.AssignedTasksCount >= 1);
     }
+
+    [Fact]
+    public async Task TaskCreationAndStatusChange_UpdatesDashboardMetrics()
+    {
+        var (_, empId, _, client) = await CreateEmployeeWithUserAsync(UserRole.Employee);
+
+        // 1. Initial personal dashboard check
+        var initialRes = await client.GetAsync("/api/dashboard/my");
+        initialRes.EnsureSuccessStatusCode();
+        var initialDash = await initialRes.Content.ReadFromJsonAsync<PersonalDashboardDto>();
+        int initialTasks = initialDash!.AssignedTasksCount;
+
+        // 2. Create task assigned to this employee
+        var createRes = await client.PostAsJsonAsync("/api/tasks", new CreateTaskItemDto
+        {
+            Title = "Task For Dashboard Test",
+            AssignedToEmployeeId = empId
+        });
+        createRes.EnsureSuccessStatusCode();
+        var createdTask = await createRes.Content.ReadFromJsonAsync<TaskItemDto>();
+
+        // 3. Verify personal dashboard task count incremented
+        var updatedRes = await client.GetAsync("/api/dashboard/my");
+        updatedRes.EnsureSuccessStatusCode();
+        var updatedDash = await updatedRes.Content.ReadFromJsonAsync<PersonalDashboardDto>();
+        Assert.Equal(initialTasks + 1, updatedDash!.AssignedTasksCount);
+
+        // 4. Start progress on task
+        var startRes = await client.PostAsync($"/api/tasks/{createdTask!.Id}/start", null);
+        startRes.EnsureSuccessStatusCode();
+
+        // 5. Verify task status is InProgress
+        var taskRes = await client.GetAsync($"/api/tasks/{createdTask.Id}");
+        taskRes.EnsureSuccessStatusCode();
+        var fetchedTask = await taskRes.Content.ReadFromJsonAsync<TaskItemDto>();
+        Assert.Equal(TaskItemStatus.InProgress, fetchedTask!.Status);
+    }
 }

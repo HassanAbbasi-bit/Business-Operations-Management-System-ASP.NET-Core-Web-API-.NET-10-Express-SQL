@@ -29,12 +29,16 @@ public class TasksController : ControllerBase
         [FromQuery] TaskItemStatus? status,
         [FromQuery] TaskPriority? priority,
         [FromQuery] Guid? assignedToId,
+        [FromQuery] Guid? assigneeId,
         [FromQuery] Guid? createdById,
         [FromQuery] int page = 1,
+        [FromQuery] int? pageNumber = null,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _taskService.GetPagedAsync(status, priority, assignedToId, createdById, page, pageSize, cancellationToken);
+        int effectivePage = pageNumber.HasValue && pageNumber.Value > 0 ? pageNumber.Value : page;
+        Guid? effectiveAssignee = assignedToId ?? assigneeId;
+        var result = await _taskService.GetPagedAsync(status, priority, effectiveAssignee, createdById, effectivePage, pageSize, cancellationToken);
         return Ok(result);
     }
 

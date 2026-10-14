@@ -264,10 +264,17 @@ public class ExpensesEndpointTests : IClassFixture<WebApplicationFactory<Program
         });
         Assert.Equal(HttpStatusCode.BadRequest, emptyRejectResponse.StatusCode);
 
-        // Reject with reason succeeds
+        // Reject with whitespace-only RejectionReason property fails
+        var whitespaceRejectResponse = await managerClient.PostAsJsonAsync($"/api/expenses/{created.Id}/reject", new ReviewExpenseDto
+        {
+            RejectionReason = "   "
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, whitespaceRejectResponse.StatusCode);
+
+        // Reject with valid RejectionReason property succeeds
         var rejectResponse = await managerClient.PostAsJsonAsync($"/api/expenses/{created.Id}/reject", new ReviewExpenseDto
         {
-            Notes = "Missing itemized tax invoice."
+            RejectionReason = "Missing itemized tax invoice."
         });
         Assert.Equal(HttpStatusCode.OK, rejectResponse.StatusCode);
         var rejected = await rejectResponse.Content.ReadFromJsonAsync<ExpenseDto>();

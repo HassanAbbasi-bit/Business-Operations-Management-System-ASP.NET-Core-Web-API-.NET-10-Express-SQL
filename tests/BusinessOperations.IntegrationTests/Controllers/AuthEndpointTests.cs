@@ -222,4 +222,90 @@ public class AuthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Login_WithUsernameOrEmailProperty_ReturnsOk_AndValidToken()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        string email = $"useralias_{Guid.NewGuid():N}@example.com";
+        const string password = "P@ssword123!";
+
+        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequestDto
+        {
+            Email = email,
+            Password = password,
+            FirstName = "Alias",
+            LastName = "Test"
+        });
+
+        // Act: login using UsernameOrEmail property without explicit Email property
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+        {
+            UsernameOrEmail = email,
+            Password = password
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var authResponse = await loginResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authResponse);
+        Assert.NotEmpty(authResponse.Token);
+        Assert.Equal(email, authResponse.Email);
+    }
+
+    [Fact]
+    public async Task Login_WithIncorrectPassword_ReturnsBadRequest_WithSafeErrorMessage()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        string email = $"badpass_{Guid.NewGuid():N}@example.com";
+
+        await client.PostAsJsonAsync("/api/auth/register", new RegisterRequestDto
+        {
+            Email = email,
+            Password = "P@ssword123!",
+            FirstName = "Security",
+            LastName = "User"
+        });
+
+        // Act
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new LoginRequestDto
+        {
+            Email = email,
+            Password = "WrongPassword999!"
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, loginResponse.StatusCode);
+        string responseBody = await loginResponse.Content.ReadAsStringAsync();
+        Assert.Contains("Invalid email or password", responseBody);
+        // Verify no stack trace or SQL details leaked
+        Assert.DoesNotContain("SELECT", responseBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Exception", responseBody, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Register_WithExplicitManagerRole_AssignsManagerRole()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        string email = $"explicit_mgr_{Guid.NewGuid():N}@example.com";
+
+        // Act
+        var registerResponse = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequestDto
+        {
+            Email = email,
+            Password = "P@ssword123!",
+            FirstName = "Manager",
+            LastName = "Candidate",
+            Role = BusinessOperations.Domain.Enums.UserRole.Manager
+        });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, registerResponse.StatusCode);
+        var authResponse = await registerResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        Assert.NotNull(authResponse);
+        Assert.Equal("Manager", authResponse.Role);
+    }
 }

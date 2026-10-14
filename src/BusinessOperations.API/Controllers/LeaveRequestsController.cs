@@ -70,10 +70,12 @@ public class LeaveRequestsController : ControllerBase
         [FromQuery] Guid? employeeId,
         [FromQuery] Guid? departmentId,
         [FromQuery] int page = 1,
+        [FromQuery] int? pageNumber = null,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var paged = await _leaveRequestService.GetPagedAsync(status, employeeId, departmentId, page, pageSize, cancellationToken);
+        int effectivePage = pageNumber.HasValue && pageNumber.Value > 0 ? pageNumber.Value : page;
+        var paged = await _leaveRequestService.GetPagedAsync(status, employeeId, departmentId, effectivePage, pageSize, cancellationToken);
         return Ok(paged);
     }
 
@@ -146,7 +148,11 @@ public class LeaveRequestsController : ControllerBase
         if (!currentUserId.HasValue)
             return Unauthorized();
 
-        var rejected = await _leaveRequestService.RejectAsync(id, currentUserId.Value, reviewDto.Notes ?? string.Empty, cancellationToken);
+        var reason = !string.IsNullOrWhiteSpace(reviewDto?.RejectionReason)
+            ? reviewDto.RejectionReason.Trim()
+            : (reviewDto?.Notes ?? string.Empty).Trim();
+
+        var rejected = await _leaveRequestService.RejectAsync(id, currentUserId.Value, reason, cancellationToken);
         return Ok(rejected);
     }
 

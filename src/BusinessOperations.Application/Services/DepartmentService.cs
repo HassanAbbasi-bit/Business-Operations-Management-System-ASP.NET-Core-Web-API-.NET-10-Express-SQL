@@ -35,6 +35,7 @@ public class DepartmentService : IDepartmentService
             Name = d.Name,
             Description = d.Description,
             ManagerEmployeeId = d.ManagerEmployeeId,
+            ManagerName = d.Employees.FirstOrDefault(e => e.Id == d.ManagerEmployeeId)?.FullName,
             EmployeeCount = d.Employees.Count,
             CreatedAtUtc = d.CreatedAtUtc
         }).ToList();
@@ -52,6 +53,7 @@ public class DepartmentService : IDepartmentService
             Name = department.Name,
             Description = department.Description,
             ManagerEmployeeId = department.ManagerEmployeeId,
+            ManagerName = department.Employees.FirstOrDefault(e => e.Id == department.ManagerEmployeeId)?.FullName,
             EmployeeCount = department.Employees.Count,
             CreatedAtUtc = department.CreatedAtUtc
         };
@@ -108,6 +110,7 @@ public class DepartmentService : IDepartmentService
             Name = department.Name,
             Description = department.Description,
             ManagerEmployeeId = department.ManagerEmployeeId,
+            ManagerName = department.Employees.FirstOrDefault(e => e.Id == department.ManagerEmployeeId)?.FullName,
             EmployeeCount = department.Employees.Count,
             CreatedAtUtc = department.CreatedAtUtc
         };

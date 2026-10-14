@@ -12,6 +12,7 @@ public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
     private readonly IEmployeeRepository _employeeRepository;
+    private readonly IDepartmentRepository _departmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
@@ -21,6 +22,7 @@ public class AuthService : IAuthService
     public AuthService(
         IUserRepository userRepository,
         IEmployeeRepository employeeRepository,
+        IDepartmentRepository departmentRepository,
         IUnitOfWork unitOfWork,
         IPasswordHasher passwordHasher,
         IJwtTokenGenerator jwtTokenGenerator,
@@ -29,6 +31,7 @@ public class AuthService : IAuthService
     {
         _userRepository = userRepository;
         _employeeRepository = employeeRepository;
+        _departmentRepository = departmentRepository;
         _unitOfWork = unitOfWork;
         _passwordHasher = passwordHasher;
         _jwtTokenGenerator = jwtTokenGenerator;

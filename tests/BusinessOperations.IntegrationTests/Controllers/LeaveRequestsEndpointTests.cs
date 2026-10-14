@@ -292,10 +292,17 @@ public class LeaveRequestsEndpointTests : IClassFixture<WebApplicationFactory<Pr
         });
         Assert.Equal(HttpStatusCode.BadRequest, emptyRejectResponse.StatusCode);
 
-        // Reject with valid reason succeeds
+        // Reject with whitespace-only RejectionReason property fails
+        var whitespaceRejectResponse = await managerClient.PostAsJsonAsync($"/api/leaverequests/{submitted.Id}/reject", new ReviewLeaveRequestDto
+        {
+            RejectionReason = "   "
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, whitespaceRejectResponse.StatusCode);
+
+        // Reject with valid RejectionReason property succeeds
         var rejectResponse = await managerClient.PostAsJsonAsync($"/api/leaverequests/{submitted.Id}/reject", new ReviewLeaveRequestDto
         {
-            Notes = "Critical release deadline overlap."
+            RejectionReason = "Critical release deadline overlap."
         });
         Assert.Equal(HttpStatusCode.OK, rejectResponse.StatusCode);
         var rejected = await rejectResponse.Content.ReadFromJsonAsync<LeaveRequestDto>();

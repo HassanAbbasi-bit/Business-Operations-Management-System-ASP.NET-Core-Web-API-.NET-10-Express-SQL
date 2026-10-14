@@ -318,4 +318,21 @@ public class EmployeesEndpointTests : IClassFixture<WebApplicationFactory<Progra
 
         Assert.Equal(HttpStatusCode.Forbidden, updateResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task GetPaged_WithPageNumberQueryAlias_ReturnsOk_WithPagedResult()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GenerateToken(UserRole.Manager));
+
+        // Act (using pageNumber query param as sent by frontend)
+        var response = await client.GetAsync("/api/employees?pageNumber=1&pageSize=10");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<EmployeeDto>>();
+        Assert.NotNull(result);
+        Assert.Equal(1, result.PageNumber);
+    }
 }

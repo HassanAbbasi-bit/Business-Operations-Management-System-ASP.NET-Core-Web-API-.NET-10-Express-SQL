@@ -17,8 +17,54 @@ import {
   Building2,
   UserCheck,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+const getFutureDate = (days) => new Date(Date.now() + 86400000 * days).toISOString().split('T')[0];
+
+const LEAVE_STATUSES = {
+  1: 'Pending',
+  2: 'Approved',
+  3: 'Rejected',
+  4: 'Cancelled'
+};
+
+const EXPENSE_STATUSES = {
+  1: 'Pending',
+  2: 'Approved',
+  3: 'Rejected',
+  4: 'Cancelled'
+};
+
+const EXPENSE_CATEGORIES = {
+  1: 'Travel',
+  2: 'Meals',
+  3: 'Equipment',
+  4: 'Office Supplies',
+  5: 'Training',
+  6: 'Other'
+};
+
+const formatLeaveStatus = (val) => {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'number') return LEAVE_STATUSES[val] || `Status ${val}`;
+  return String(val);
+};
+
+const formatExpenseStatus = (val) => {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'number') return EXPENSE_STATUSES[val] || `Status ${val}`;
+  return String(val);
+};
+
+const formatExpenseCategory = (val) => {
+  if (val === null || val === undefined) return '—';
+  if (typeof val === 'number') return EXPENSE_CATEGORIES[val] || `Category ${val}`;
+  return String(val);
+};
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(getSavedUser());
@@ -26,10 +72,14 @@ export default function App() {
   const [healthStatus, setHealthStatus] = useState({ online: false, db: 'Unknown', latency: null });
   const [toasts, setToasts] = useState([]);
 
-  // Auth modal
+  // Auth modal & security controls
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
   const [authForm, setAuthForm] = useState({ firstName: '', lastName: '', email: '', password: '', role: 'Employee' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authFieldErrors, setAuthFieldErrors] = useState({});
 
   // Dashboard Data
   const [summaryData, setSummaryData] = useState(null);
@@ -37,6 +87,7 @@ export default function App() {
 
   // Departments & Employees
   const [departments, setDepartments] = useState([]);
+  const [deptSearch, setDeptSearch] = useState('');
   const [employees, setEmployees] = useState([]);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeDeptFilter, setEmployeeDeptFilter] = useState('');
@@ -61,37 +112,38 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(null); // 'dept', 'employee', 'leave', 'task', 'expense', 'rejectLeave', 'rejectExpense'
   const [rejectTargetId, setRejectTargetId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [modalError, setModalError] = useState('');
 
   // Forms
-  const [newDeptForm, setNewDeptForm] = useState({ name: '', code: '', description: '' });
-  const [newEmployeeForm, setNewEmployeeForm] = useState({
-    userId: '',
+  const [newDeptForm, setNewDeptForm] = useState({ name: '', description: '' });
+  const [newEmployeeForm, setNewEmployeeForm] = useState(() => ({
     firstName: '',
     lastName: '',
+    email: '',
     departmentId: '',
-    jobTitle: '',
-    salary: 65000,
+    managerId: '',
+    hireDate: getTodayDate(),
     annualLeaveBalanceDays: 20
-  });
-  const [newLeaveForm, setNewLeaveForm] = useState({
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+  }));
+  const [newLeaveForm, setNewLeaveForm] = useState(() => ({
+    startDate: getTodayDate(),
+    endDate: getFutureDate(3),
     reason: ''
-  });
-  const [newTaskForm, setNewTaskForm] = useState({
+  }));
+  const [newTaskForm, setNewTaskForm] = useState(() => ({
     title: '',
     description: '',
     priority: 1, // Medium
     assignedToEmployeeId: '',
-    dueDate: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0]
-  });
-  const [newExpenseForm, setNewExpenseForm] = useState({
+    dueDate: getFutureDate(7)
+  }));
+  const [newExpenseForm, setNewExpenseForm] = useState(() => ({
     amount: 50.0,
     currency: 'USD',
-    category: 0, // Travel
-    expenseDate: new Date().toISOString().split('T')[0],
+    category: 1, // Travel
+    expenseDate: getTodayDate(),
     description: ''
-  });
+  }));
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -122,6 +174,13 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Automatically redirect employees away from management-only tabs
+  useEffect(() => {
+    if (currentUser?.role === 'Employee' && activeTab === 'employees') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, currentUser]);
+
   // Fetch initial core data
   useEffect(() => {
     if (currentUser) {
@@ -129,14 +188,26 @@ export default function App() {
     }
   }, [currentUser]);
 
-  const loadUserData = async () => {
+  const refreshDashboard = () => {
     try {
       if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') {
         api.dashboard.summary().then(setSummaryData).catch(() => {});
       }
       api.dashboard.my().then(setPersonalData).catch(() => {});
+    } catch (err) {
+      console.error('Failed to refresh dashboard', err);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      refreshDashboard();
       api.departments.list().then(setDepartments).catch(() => {});
-      api.employees.list({ pageSize: 50 }).then((res) => setEmployees(res.items || [])).catch(() => {});
+      if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') {
+        api.employees.list({ pageSize: 50 }).then((res) => setEmployees(res.items || [])).catch(() => {});
+      } else {
+        setEmployees([]);
+      }
       loadLeaves();
       loadTasks();
       loadExpenses();
@@ -152,6 +223,8 @@ export default function App() {
       if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') {
         const rev = await api.leave.list({ pageSize: 50, status: 'Pending' });
         setReviewLeaves(rev.items || []);
+      } else {
+        setReviewLeaves([]);
       }
     } catch (e) { console.error(e); }
   };
@@ -175,6 +248,8 @@ export default function App() {
       if (currentUser?.role === 'Admin' || currentUser?.role === 'Manager') {
         const rev = await api.expenses.list({ pageSize: 50, status: 'Pending' });
         setReviewExpenses(rev.items || []);
+      } else {
+        setReviewExpenses([]);
       }
     } catch (e) { console.error(e); }
   };
@@ -183,16 +258,41 @@ export default function App() {
     if (currentUser) {
       loadTasks();
     }
-  }, [taskFilterStatus, taskFilterPriority, taskSearch]);
+  }, [currentUser, taskFilterStatus, taskFilterPriority, taskSearch]);
+
+  // Demo account population (does NOT auto-login, requires explicit Sign In click)
+  const fillDemoCredentials = (email, password) => {
+    setAuthMode('login');
+    setAuthForm((prev) => ({ ...prev, email, password }));
+    setAuthError('');
+    setAuthFieldErrors({});
+    showToast(`Loaded ${email} credentials. Click "Sign In" to authenticate.`);
+  };
 
   // Auth Actions
-  const handleLogin = async (e, demoCreds = null) => {
+  const handleLogin = async (e) => {
     if (e) e.preventDefault();
-    const identifier = demoCreds ? demoCreds.username : authForm.email;
-    const password = demoCreds ? demoCreds.password : authForm.password;
+    if (isSubmitting) return;
+
+    const email = authForm.email.trim();
+    const password = authForm.password;
+
+    const errors = {};
+    if (!email) errors.email = 'Email address or username is required.';
+    if (!password) errors.password = 'Password is required.';
+
+    if (Object.keys(errors).length > 0) {
+      setAuthFieldErrors(errors);
+      setAuthError('Please fill in all required credentials.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setAuthError('');
+    setAuthFieldErrors({});
 
     try {
-      const res = await api.auth.login(identifier, password);
+      const res = await api.auth.login(email, password);
       setAuthToken(res.token);
       const userObj = {
         id: res.userId,
@@ -204,21 +304,65 @@ export default function App() {
       setSavedUser(userObj);
       setCurrentUser(userObj);
       setShowAuthModal(false);
+      setAuthForm({ firstName: '', lastName: '', email: '', password: '', role: 'Employee' });
       showToast(`Welcome back, ${userObj.username} (${userObj.role})!`);
     } catch (err) {
+      setAuthError(err.message || 'Authentication failed. Please verify your credentials.');
+      setAuthFieldErrors(err.fieldErrors || {});
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleRegister = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isSubmitting) return;
+
+    const firstName = authForm.firstName.trim();
+    const lastName = authForm.lastName.trim();
+    const email = authForm.email.trim();
+    const password = authForm.password;
+
+    const errors = {};
+    if (!firstName) errors.firstName = 'First name is required.';
+    if (!lastName) errors.lastName = 'Last name is required.';
+    if (!email) {
+      errors.email = 'Email address is required.';
+    } else if (!email.includes('@') || !email.includes('.')) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required.';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long.';
+    } else if (
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[!*@#$%^&+=]/.test(password)
+    ) {
+      errors.password = 'Password must include uppercase, lowercase, digit, and symbol.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setAuthFieldErrors(errors);
+      setAuthError('Please fix the validation errors before registering.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setAuthError('');
+    setAuthFieldErrors({});
+
     try {
       const roleMap = { Admin: 3, Manager: 2, Employee: 1 };
       const res = await api.auth.register({
-        firstName: authForm.firstName.trim() || 'Staff',
-        lastName: authForm.lastName.trim() || 'Member',
-        email: authForm.email.trim(),
-        password: authForm.password,
+        firstName,
+        lastName,
+        email,
+        password,
         role: roleMap[authForm.role] || 1
       });
       setAuthToken(res.token);
@@ -232,9 +376,14 @@ export default function App() {
       setSavedUser(userObj);
       setCurrentUser(userObj);
       setShowAuthModal(false);
+      setAuthForm({ firstName: '', lastName: '', email: '', password: '', role: 'Employee' });
       showToast(`Account registered successfully as ${userObj.role}!`);
     } catch (err) {
+      setAuthError(err.message || 'Registration failed. Please check the inputs.');
+      setAuthFieldErrors(err.fieldErrors || {});
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -250,44 +399,124 @@ export default function App() {
   // Actions
   const handleCreateDepartment = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!newDeptForm.name.trim()) {
+      showToast('Department name is required.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError('');
     try {
-      await api.departments.create(newDeptForm);
+      await api.departments.create({
+        name: newDeptForm.name.trim(),
+        description: newDeptForm.description.trim() || undefined
+      });
       showToast('Department created successfully!');
       setModalOpen(null);
-      setNewDeptForm({ name: '', code: '', description: '' });
-      api.departments.list().then(setDepartments);
+      setNewDeptForm({ name: '', description: '' });
+      const depts = await api.departments.list();
+      setDepartments(depts);
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message);
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!newEmployeeForm.firstName.trim() || !newEmployeeForm.lastName.trim() || !newEmployeeForm.email.trim()) {
+      showToast('First name, last name, and email are required.', 'error');
+      return;
+    }
+    if (!newEmployeeForm.departmentId) {
+      showToast('Please select a department.', 'error');
+      return;
+    }
+    if (!newEmployeeForm.hireDate) {
+      showToast('Hire date is required.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError('');
     try {
       await api.employees.create({
-        ...newEmployeeForm,
-        userId: newEmployeeForm.userId || currentUser.id,
-        salary: Number(newEmployeeForm.salary),
-        annualLeaveBalanceDays: Number(newEmployeeForm.annualLeaveBalanceDays)
+        firstName: newEmployeeForm.firstName.trim(),
+        lastName: newEmployeeForm.lastName.trim(),
+        email: newEmployeeForm.email.trim(),
+        departmentId: newEmployeeForm.departmentId,
+        managerId: newEmployeeForm.managerId || undefined,
+        hireDate: newEmployeeForm.hireDate,
+        annualLeaveBalanceDays: Number(newEmployeeForm.annualLeaveBalanceDays) || 20
       });
-      showToast('Employee profile added!');
+      showToast('Employee profile added successfully!');
       setModalOpen(null);
-      api.employees.list({ pageSize: 50 }).then((res) => setEmployees(res.items || []));
+      setNewEmployeeForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        departmentId: '',
+        managerId: '',
+        hireDate: getTodayDate(),
+        annualLeaveBalanceDays: 20
+      });
+      const res = await api.employees.list({ pageSize: 50 });
+      setEmployees(res.items || []);
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message);
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!newLeaveForm.startDate || !newLeaveForm.endDate) {
+      showToast('Start and end dates are required.', 'error');
+      return;
+    }
+    if (new Date(newLeaveForm.startDate) > new Date(newLeaveForm.endDate)) {
+      showToast('Start date cannot be after end date.', 'error');
+      return;
+    }
+    if (!newLeaveForm.reason.trim()) {
+      showToast('Reason for leave is required.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError('');
     try {
-      await api.leave.submit(newLeaveForm);
+      await api.leave.submit({
+        startDate: newLeaveForm.startDate,
+        endDate: newLeaveForm.endDate,
+        reason: newLeaveForm.reason.trim()
+      });
       showToast('Time-off request submitted!');
       setModalOpen(null);
+      setNewLeaveForm({
+        startDate: getTodayDate(),
+        endDate: getFutureDate(3),
+        reason: ''
+      });
       loadLeaves();
-      api.dashboard.my().then(setPersonalData);
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message);
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -296,33 +525,42 @@ export default function App() {
       await api.leave.approve(id);
       showToast('Leave request approved! Balance updated.');
       loadLeaves();
-      if (summaryData) api.dashboard.summary().then(setSummaryData);
+      refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
 
   const handleRejectLeaveConfirm = async () => {
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setModalError('A rejection reason is required.');
+      showToast('A rejection reason is required.', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    setModalError('');
     try {
-      if (!rejectionReason.trim()) {
-        showToast('A rejection reason is required', 'error');
-        return;
-      }
-      await api.leave.reject(rejectTargetId, rejectionReason);
-      showToast('Leave request rejected');
+      await api.leave.reject(rejectTargetId, reason);
+      showToast('Leave request rejected.');
       setModalOpen(null);
       setRejectionReason('');
       loadLeaves();
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message || 'Failed to reject leave request.');
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancelLeave = async (id) => {
     try {
       await api.leave.cancel(id);
-      showToast('Leave request cancelled');
+      showToast('Leave request cancelled.');
       loadLeaves();
+      refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -330,17 +568,39 @@ export default function App() {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!newTaskForm.title.trim()) {
+      showToast('Task title is required.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError('');
     try {
       await api.tasks.create({
-        ...newTaskForm,
+        title: newTaskForm.title.trim(),
+        description: newTaskForm.description.trim() || undefined,
         priority: Number(newTaskForm.priority),
-        assignedToEmployeeId: newTaskForm.assignedToEmployeeId || undefined
+        assignedToEmployeeId: newTaskForm.assignedToEmployeeId || undefined,
+        dueDate: newTaskForm.dueDate || undefined
       });
       showToast('Task created successfully!');
       setModalOpen(null);
+      setNewTaskForm({
+        title: '',
+        description: '',
+        priority: 1,
+        assignedToEmployeeId: '',
+        dueDate: getFutureDate(7)
+      });
       loadTasks();
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message);
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -351,8 +611,9 @@ export default function App() {
       else if (action === 'requestChanges') await api.tasks.requestChanges(taskId);
       else if (action === 'complete') await api.tasks.complete(taskId);
       else if (action === 'cancel') await api.tasks.cancel(taskId);
-      showToast(`Task status updated!`);
+      showToast('Task status updated!');
       loadTasks();
+      refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -360,17 +621,44 @@ export default function App() {
 
   const handleSubmitExpense = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const amount = Number(newExpenseForm.amount);
+    if (!amount || amount <= 0) {
+      showToast('Please enter a valid expense amount greater than 0.', 'error');
+      return;
+    }
+    if (!newExpenseForm.description.trim()) {
+      showToast('Expense justification/description is required.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setModalError('');
     try {
       await api.expenses.submit({
-        ...newExpenseForm,
-        amount: Number(newExpenseForm.amount),
-        category: Number(newExpenseForm.category)
+        amount,
+        currency: newExpenseForm.currency,
+        category: Number(newExpenseForm.category),
+        expenseDate: newExpenseForm.expenseDate,
+        description: newExpenseForm.description.trim()
       });
       showToast('Expense reimbursement submitted!');
       setModalOpen(null);
+      setNewExpenseForm({
+        amount: 50.0,
+        currency: 'USD',
+        category: 1,
+        expenseDate: getTodayDate(),
+        description: ''
+      });
       loadExpenses();
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message);
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -379,45 +667,66 @@ export default function App() {
       await api.expenses.approve(id);
       showToast('Expense approved for reimbursement!');
       loadExpenses();
+      refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
 
   const handleRejectExpenseConfirm = async () => {
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      setModalError('A rejection reason is required.');
+      showToast('A rejection reason is required.', 'error');
+      return;
+    }
+    setIsSubmitting(true);
+    setModalError('');
     try {
-      if (!rejectionReason.trim()) {
-        showToast('A rejection reason is required', 'error');
-        return;
-      }
-      await api.expenses.reject(rejectTargetId, rejectionReason);
-      showToast('Expense reimbursement rejected');
+      await api.expenses.reject(rejectTargetId, reason);
+      showToast('Expense reimbursement rejected.');
       setModalOpen(null);
       setRejectionReason('');
       loadExpenses();
+      refreshDashboard();
     } catch (err) {
+      setModalError(err.message || 'Failed to reject expense reimbursement.');
       showToast(err.message, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCancelExpense = async (id) => {
     try {
       await api.expenses.cancel(id);
-      showToast('Expense reimbursement cancelled');
+      showToast('Expense reimbursement cancelled.');
       loadExpenses();
+      refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
   };
 
   const filteredEmployees = employees.filter((emp) => {
+    const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim().toLowerCase();
+    const email = (emp.email || '').toLowerCase();
+    const deptName = (emp.departmentName || '').toLowerCase();
+    const search = employeeSearch.toLowerCase().trim();
     const matchesSearch =
-      !employeeSearch ||
-      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.jobTitle.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.email.toLowerCase().includes(employeeSearch.toLowerCase());
+      !search ||
+      fullName.includes(search) ||
+      email.includes(search) ||
+      deptName.includes(search);
     const matchesDept = !employeeDeptFilter || emp.departmentId === employeeDeptFilter;
     return matchesSearch && matchesDept;
+  });
+
+  const filteredDepartments = departments.filter((dept) => {
+    const name = (dept.name || '').toLowerCase();
+    const mgr = (dept.managerName || '').toLowerCase();
+    const search = deptSearch.toLowerCase().trim();
+    return !search || name.includes(search) || mgr.includes(search);
   });
 
   return (
@@ -473,12 +782,14 @@ export default function App() {
           >
             <LayoutDashboard size={18} /> Overview
           </button>
-          <button
-            className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`}
-            onClick={() => setActiveTab('employees')}
-          >
-            <Users size={18} /> Personnel & Teams
-          </button>
+          {(currentUser?.role === 'Admin' || currentUser?.role === 'Manager') && (
+            <button
+              className={`tab-btn ${activeTab === 'employees' ? 'active' : ''}`}
+              onClick={() => setActiveTab('employees')}
+            >
+              <Users size={18} /> Personnel & Teams
+            </button>
+          )}
           <button
             className={`tab-btn ${activeTab === 'leaves' ? 'active' : ''}`}
             onClick={() => setActiveTab('leaves')}
@@ -642,20 +953,43 @@ export default function App() {
             </div>
 
             {/* Department Cards */}
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>Departments Overview</h3>
-            <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-              {departments.map((dept) => (
-                <div key={dept.id} className="glass-card" style={{ padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="badge badge-inprogress">{dept.code}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dept.activeEmployeeCount} Staff</span>
-                  </div>
-                  <h4 style={{ marginTop: '0.65rem', fontSize: '1.1rem' }}>{dept.name}</h4>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                    Manager: {dept.managerName || 'Unassigned'}
-                  </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.1rem', margin: 0 }}>Departments Overview ({departments.length})</h3>
+              {departments.length > 4 && (
+                <input
+                  type="text"
+                  className="search-input"
+                  style={{ maxWidth: '280px', padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                  placeholder="Filter departments by name or manager..."
+                  value={deptSearch}
+                  onChange={(e) => setDeptSearch(e.target.value)}
+                />
+              )}
+            </div>
+
+            <div className="dept-grid">
+              {departments.length === 0 ? (
+                <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No departments created yet.
                 </div>
-              ))}
+              ) : filteredDepartments.length === 0 ? (
+                <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No departments matching &quot;{deptSearch}&quot;.
+                </div>
+              ) : (
+                filteredDepartments.slice(0, 48).map((dept) => (
+                  <div key={dept.id} className="glass-card dept-card" title={dept.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="badge badge-inprogress">{(dept.name || 'DEP').slice(0, 3).toUpperCase()}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dept.employeeCount ?? 0} Staff</span>
+                    </div>
+                    <h4 className="dept-title" title={dept.name}>{dept.name}</h4>
+                    <p className="dept-manager" title={dept.managerName || 'Unassigned'}>
+                      Manager: {dept.managerName || 'Unassigned'}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* Employee Directory */}
@@ -664,7 +998,7 @@ export default function App() {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Search staff by name, title, or email..."
+                placeholder="Search staff by name, department, or email..."
                 value={employeeSearch}
                 onChange={(e) => setEmployeeSearch(e.target.value)}
               />
@@ -684,7 +1018,6 @@ export default function App() {
                 <thead>
                   <tr>
                     <th>Employee</th>
-                    <th>Job Title</th>
                     <th>Department</th>
                     <th>Hire Date</th>
                     <th>Leave Balance</th>
@@ -694,7 +1027,7 @@ export default function App() {
                 <tbody>
                   {filteredEmployees.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                      <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>
                         No staff members matching your filter criteria.
                       </td>
                     </tr>
@@ -704,7 +1037,7 @@ export default function App() {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div className="user-avatar" style={{ width: 34, height: 34, fontSize: '0.85rem' }}>
-                              {emp.firstName[0]}{emp.lastName[0]}
+                              {(emp.firstName?.[0] || 'U')}{(emp.lastName?.[0] || '')}
                             </div>
                             <div>
                               <div style={{ fontWeight: 600 }}>{emp.firstName} {emp.lastName}</div>
@@ -712,7 +1045,6 @@ export default function App() {
                             </div>
                           </div>
                         </td>
-                        <td>{emp.jobTitle}</td>
                         <td>{emp.departmentName || '—'}</td>
                         <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
                           {emp.hireDate?.split('T')[0]}
@@ -788,17 +1120,17 @@ export default function App() {
                       myLeaves.map((lr) => (
                         <tr key={lr.id}>
                           <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-                            {lr.startDate.split('T')[0]} → {lr.endDate.split('T')[0]}
+                            {(lr.startDate || '').split('T')[0] || lr.startDate || '—'} → {(lr.endDate || '').split('T')[0] || lr.endDate || '—'}
                           </td>
                           <td style={{ fontWeight: 700 }}>{lr.daysCount}</td>
                           <td>{lr.reason}</td>
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{lr.createdAtUtc.split('T')[0]}</td>
+                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{(lr.createdAtUtc || '').split('T')[0] || lr.createdAtUtc || '—'}</td>
                           <td>
-                            <span className={`badge badge-${lr.status.toLowerCase()}`}>{lr.status}</span>
+                            <span className={`badge badge-${formatLeaveStatus(lr.status).toLowerCase()}`}>{formatLeaveStatus(lr.status)}</span>
                           </td>
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{lr.rejectionReason || '—'}</td>
+                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{lr.rejectionReason || lr.reviewNotes || '—'}</td>
                           <td>
-                            {lr.status === 'Pending' && (
+                            {formatLeaveStatus(lr.status) === 'Pending' && (
                               <button className="btn-danger btn-sm" onClick={() => handleCancelLeave(lr.id)}>
                                 Cancel
                               </button>
@@ -831,7 +1163,7 @@ export default function App() {
                         <tr key={lr.id}>
                           <td><strong>{lr.employeeName}</strong></td>
                           <td>{lr.departmentName}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{lr.startDate.split('T')[0]} → {lr.endDate.split('T')[0]}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{(lr.startDate || '').split('T')[0] || lr.startDate || '—'} → {(lr.endDate || '').split('T')[0] || lr.endDate || '—'}</td>
                           <td><span className="badge badge-inprogress">{lr.daysCount} Days</span></td>
                           <td>{lr.reason}</td>
                           <td>
@@ -843,6 +1175,8 @@ export default function App() {
                                 className="btn-danger btn-sm"
                                 onClick={() => {
                                   setRejectTargetId(lr.id);
+                                  setRejectionReason('');
+                                  setModalError('');
                                   setModalOpen('rejectLeave');
                                 }}
                               >
@@ -1028,14 +1362,14 @@ export default function App() {
                     ) : (
                       myExpenses.map((exp) => (
                         <tr key={exp.id}>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{exp.expenseDate.split('T')[0]}</td>
-                          <td><span className="badge badge-inprogress">{exp.category}</span></td>
-                          <td style={{ fontWeight: 700 }}>${Number(exp.amount).toFixed(2)} {exp.currency}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{(exp.expenseDate || '').split('T')[0] || exp.expenseDate || '—'}</td>
+                          <td><span className="badge badge-inprogress">{formatExpenseCategory(exp.category)}</span></td>
+                          <td style={{ fontWeight: 700 }}>${Number(exp.amount || 0).toFixed(2)} {exp.currency}</td>
                           <td>{exp.description}</td>
-                          <td><span className={`badge badge-${exp.status.toLowerCase()}`}>{exp.status}</span></td>
-                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{exp.rejectionReason || '—'}</td>
+                          <td><span className={`badge badge-${formatExpenseStatus(exp.status).toLowerCase()}`}>{formatExpenseStatus(exp.status)}</span></td>
+                          <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{exp.rejectionReason || exp.reviewNotes || '—'}</td>
                           <td>
-                            {exp.status === 'Pending' && (
+                            {formatExpenseStatus(exp.status) === 'Pending' && (
                               <button className="btn-danger btn-sm" onClick={() => handleCancelExpense(exp.id)}>
                                 Cancel
                               </button>
@@ -1069,10 +1403,10 @@ export default function App() {
                         <tr key={exp.id}>
                           <td><strong>{exp.employeeName}</strong></td>
                           <td>{exp.departmentName}</td>
-                          <td><span className="badge badge-inprogress">{exp.category}</span></td>
-                          <td style={{ fontWeight: 700, color: '#34d399' }}>${Number(exp.amount).toFixed(2)} {exp.currency}</td>
+                          <td><span className="badge badge-inprogress">{formatExpenseCategory(exp.category)}</span></td>
+                          <td style={{ fontWeight: 700, color: '#34d399' }}>${Number(exp.amount || 0).toFixed(2)} {exp.currency}</td>
                           <td>{exp.description}</td>
-                          <td style={{ fontFamily: 'var(--font-mono)' }}>{exp.expenseDate.split('T')[0]}</td>
+                          <td style={{ fontFamily: 'var(--font-mono)' }}>{(exp.expenseDate || '').split('T')[0] || exp.expenseDate || '—'}</td>
                           <td>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button className="btn-success btn-sm" onClick={() => handleApproveExpense(exp.id)}>
@@ -1082,6 +1416,8 @@ export default function App() {
                                 className="btn-danger btn-sm"
                                 onClick={() => {
                                   setRejectTargetId(exp.id);
+                                  setRejectionReason('');
+                                  setModalError('');
                                   setModalOpen('rejectExpense');
                                 }}
                               >
@@ -1110,38 +1446,60 @@ export default function App() {
             </div>
 
             {/* Quick Demo Switcher */}
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              One-Click Enterprise Demo Profiles:
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+              Select Demo Credentials to Populate Form (Click "Sign In" below to authenticate):
             </p>
             <div className="demo-accounts">
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'admin@operix.com', password: 'Admin123!' })}
+                role="button"
+                tabIndex={0}
+                onClick={() => fillDemoCredentials('admin@operix.com', 'Admin123!')}
+                onKeyDown={(e) => e.key === 'Enter' && fillDemoCredentials('admin@operix.com', 'Admin123!')}
+                title="Click to populate Admin credentials"
               >
                 <ShieldCheck size={20} color="#818cf8" />
                 <span className="demo-role">Admin</span>
                 <span className="demo-cred">admin@operix.com</span>
+                <span className="demo-hint-badge">Load Admin</span>
               </div>
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'manager@operix.com', password: 'Manager123!' })}
+                role="button"
+                tabIndex={0}
+                onClick={() => fillDemoCredentials('manager@operix.com', 'Manager123!')}
+                onKeyDown={(e) => e.key === 'Enter' && fillDemoCredentials('manager@operix.com', 'Manager123!')}
+                title="Click to populate Manager credentials"
               >
                 <UserCheck size={20} color="#22d3ee" />
                 <span className="demo-role">Manager</span>
                 <span className="demo-cred">manager@operix.com</span>
+                <span className="demo-hint-badge">Load Manager</span>
               </div>
               <div
                 className="demo-account-card"
-                onClick={() => handleLogin(null, { username: 'employee@operix.com', password: 'Employee123!' })}
+                role="button"
+                tabIndex={0}
+                onClick={() => fillDemoCredentials('employee@operix.com', 'Employee123!')}
+                onKeyDown={(e) => e.key === 'Enter' && fillDemoCredentials('employee@operix.com', 'Employee123!')}
+                title="Click to populate Employee credentials"
               >
                 <Users size={20} color="#34d399" />
                 <span className="demo-role">Employee</span>
                 <span className="demo-cred">employee@operix.com</span>
+                <span className="demo-hint-badge">Load Employee</span>
               </div>
             </div>
 
+            {authError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{authError}</span>
+              </div>
+            )}
+
             {/* Form */}
-            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister}>
+            <form onSubmit={authMode === 'login' ? handleLogin : handleRegister} noValidate>
               {authMode === 'login' ? (
                 <>
                   <div className="form-group">
@@ -1150,19 +1508,48 @@ export default function App() {
                       type="text"
                       required
                       value={authForm.email}
-                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                      onChange={(e) => {
+                        setAuthForm({ ...authForm, email: e.target.value });
+                        setAuthFieldErrors((prev) => ({ ...prev, email: null }));
+                      }}
                       placeholder="e.g. admin@operix.com or admin"
+                      autoComplete="username"
                     />
+                    {authFieldErrors.email && (
+                      <span className="field-error-msg">
+                        <AlertCircle size={12} /> {authFieldErrors.email}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label>Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={authForm.password}
-                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                      placeholder="••••••••"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={authForm.password}
+                        onChange={(e) => {
+                          setAuthForm({ ...authForm, password: e.target.value });
+                          setAuthFieldErrors((prev) => ({ ...prev, password: null }));
+                        }}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {authFieldErrors.password && (
+                      <span className="field-error-msg">
+                        <AlertCircle size={12} /> {authFieldErrors.password}
+                      </span>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1174,9 +1561,17 @@ export default function App() {
                         type="text"
                         required
                         value={authForm.firstName}
-                        onChange={(e) => setAuthForm({ ...authForm, firstName: e.target.value })}
+                        onChange={(e) => {
+                          setAuthForm({ ...authForm, firstName: e.target.value });
+                          setAuthFieldErrors((prev) => ({ ...prev, firstName: null }));
+                        }}
                         placeholder="e.g. Jane"
                       />
+                      {authFieldErrors.firstName && (
+                        <span className="field-error-msg">
+                          <AlertCircle size={12} /> {authFieldErrors.firstName}
+                        </span>
+                      )}
                     </div>
                     <div className="form-group">
                       <label>Last Name</label>
@@ -1184,9 +1579,17 @@ export default function App() {
                         type="text"
                         required
                         value={authForm.lastName}
-                        onChange={(e) => setAuthForm({ ...authForm, lastName: e.target.value })}
+                        onChange={(e) => {
+                          setAuthForm({ ...authForm, lastName: e.target.value });
+                          setAuthFieldErrors((prev) => ({ ...prev, lastName: null }));
+                        }}
                         placeholder="e.g. Doe"
                       />
+                      {authFieldErrors.lastName && (
+                        <span className="field-error-msg">
+                          <AlertCircle size={12} /> {authFieldErrors.lastName}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="form-group">
@@ -1195,9 +1598,18 @@ export default function App() {
                       type="email"
                       required
                       value={authForm.email}
-                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                      onChange={(e) => {
+                        setAuthForm({ ...authForm, email: e.target.value });
+                        setAuthFieldErrors((prev) => ({ ...prev, email: null }));
+                      }}
                       placeholder="e.g. user@company.com"
+                      autoComplete="email"
                     />
+                    {authFieldErrors.email && (
+                      <span className="field-error-msg">
+                        <AlertCircle size={12} /> {authFieldErrors.email}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label>Account Role</label>
@@ -1212,13 +1624,33 @@ export default function App() {
                   </div>
                   <div className="form-group">
                     <label>Password</label>
-                    <input
-                      type="password"
-                      required
-                      value={authForm.password}
-                      onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                      placeholder="Min 8 chars (e.g. SecurePass123!)"
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={authForm.password}
+                        onChange={(e) => {
+                          setAuthForm({ ...authForm, password: e.target.value });
+                          setAuthFieldErrors((prev) => ({ ...prev, password: null }));
+                        }}
+                        placeholder="Min 8 chars (e.g. SecurePass123!)"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {authFieldErrors.password && (
+                      <span className="field-error-msg">
+                        <AlertCircle size={12} /> {authFieldErrors.password}
+                      </span>
+                    )}
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
                       Requirements: 8+ characters, with uppercase, lowercase, number, and symbol (!?*@#$%^&+=).
                     </span>
@@ -1229,12 +1661,17 @@ export default function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
                 <span
                   style={{ fontSize: '0.85rem', color: 'var(--primary)', cursor: 'pointer' }}
-                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                  onClick={() => {
+                    setAuthMode(authMode === 'login' ? 'register' : 'login');
+                    setAuthError('');
+                    setAuthFieldErrors({});
+                  }}
                 >
                   {authMode === 'login' ? 'Need an account? Register' : 'Already have an account? Sign In'}
                 </span>
-                <button type="submit" className="btn-primary">
-                  {authMode === 'login' ? 'Sign In' : 'Register Account'}
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {authMode === 'login' ? (isSubmitting ? 'Signing In...' : 'Sign In') : (isSubmitting ? 'Registering...' : 'Register Account')}
                 </button>
               </div>
             </form>
@@ -1250,6 +1687,12 @@ export default function App() {
               <h3 className="modal-title">Create New Department</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <form onSubmit={handleCreateDepartment}>
               <div className="form-group">
                 <label>Department Name</label>
@@ -1259,17 +1702,6 @@ export default function App() {
                   placeholder="e.g. Global Operations"
                   value={newDeptForm.name}
                   onChange={(e) => setNewDeptForm({ ...newDeptForm, name: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Department Code</label>
-                <input
-                  type="text"
-                  required
-                  maxLength={10}
-                  placeholder="e.g. OPS"
-                  value={newDeptForm.code}
-                  onChange={(e) => setNewDeptForm({ ...newDeptForm, code: e.target.value })}
                 />
               </div>
               <div className="form-group">
@@ -1283,7 +1715,10 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Department</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {isSubmitting ? 'Creating...' : 'Create Department'}
+                </button>
               </div>
             </form>
           </div>
@@ -1298,6 +1733,12 @@ export default function App() {
               <h3 className="modal-title">Create Employee Profile</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <form onSubmit={handleCreateEmployee}>
               <div className="form-row">
                 <div className="form-group">
@@ -1320,43 +1761,58 @@ export default function App() {
                 </div>
               </div>
               <div className="form-group">
-                <label>Job Title</label>
+                <label>Email Address</label>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="e.g. Operations Specialist"
-                  value={newEmployeeForm.jobTitle}
-                  onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, jobTitle: e.target.value })}
+                  placeholder="e.g. employee@company.com"
+                  value={newEmployeeForm.email}
+                  onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, email: e.target.value })}
                 />
-              </div>
-              <div className="form-group">
-                <label>Department</label>
-                <select
-                  required
-                  value={newEmployeeForm.departmentId}
-                  onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, departmentId: e.target.value })}
-                >
-                  <option value="">Select Department...</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
               </div>
               <div className="form-row">
                 <div className="form-group">
-                  <label>Salary (USD)</label>
+                  <label>Department</label>
+                  <select
+                    required
+                    value={newEmployeeForm.departmentId}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, departmentId: e.target.value })}
+                  >
+                    <option value="">Select Department...</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Reporting Manager (Optional)</label>
+                  <select
+                    value={newEmployeeForm.managerId}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, managerId: e.target.value })}
+                  >
+                    <option value="">No Manager Assigned</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Hire Date</label>
                   <input
-                    type="number"
-                    min="0"
-                    value={newEmployeeForm.salary}
-                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, salary: e.target.value })}
+                    type="date"
+                    required
+                    value={newEmployeeForm.hireDate}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, hireDate: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Annual Leave Days</label>
+                  <label>Annual Leave Balance Days</label>
                   <input
                     type="number"
                     min="0"
+                    required
                     value={newEmployeeForm.annualLeaveBalanceDays}
                     onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, annualLeaveBalanceDays: e.target.value })}
                   />
@@ -1364,7 +1820,10 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Profile</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {isSubmitting ? 'Saving...' : 'Save Profile'}
+                </button>
               </div>
             </form>
           </div>
@@ -1379,6 +1838,12 @@ export default function App() {
               <h3 className="modal-title">Request Time Off</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <form onSubmit={handleApplyLeave}>
               <div className="form-row">
                 <div className="form-group">
@@ -1412,7 +1877,10 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Submit Request</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                </button>
               </div>
             </form>
           </div>
@@ -1427,6 +1895,12 @@ export default function App() {
               <h3 className="modal-title">Create Operational Task</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <form onSubmit={handleCreateTask}>
               <div className="form-group">
                 <label>Task Title</label>
@@ -1477,13 +1951,16 @@ export default function App() {
                 >
                   <option value="">Unassigned</option>
                   {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.jobTitle})</option>
+                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.departmentName || 'Staff'})</option>
                   ))}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Task</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {isSubmitting ? 'Creating...' : 'Create Task'}
+                </button>
               </div>
             </form>
           </div>
@@ -1498,6 +1975,12 @@ export default function App() {
               <h3 className="modal-title">Submit Expense Reimbursement</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <form onSubmit={handleSubmitExpense}>
               <div className="form-row">
                 <div className="form-group">
@@ -1530,12 +2013,12 @@ export default function App() {
                     value={newExpenseForm.category}
                     onChange={(e) => setNewExpenseForm({ ...newExpenseForm, category: e.target.value })}
                   >
-                    <option value="0">Travel</option>
-                    <option value="1">Meals</option>
-                    <option value="2">Office Supplies</option>
+                    <option value="1">Travel</option>
+                    <option value="2">Meals</option>
                     <option value="3">Equipment</option>
-                    <option value="4">Software</option>
-                    <option value="5">Other</option>
+                    <option value="4">Office Supplies</option>
+                    <option value="5">Training</option>
+                    <option value="6">Other</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -1560,7 +2043,10 @@ export default function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-                <button type="submit" className="btn-primary">Submit Claim</button>
+                <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                  {isSubmitting && <span className="btn-spinner" />}
+                  {isSubmitting ? 'Submitting...' : 'Submit Claim'}
+                </button>
               </div>
             </form>
           </div>
@@ -1575,6 +2061,12 @@ export default function App() {
               <h3 className="modal-title">Reject Leave Request</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <div className="form-group">
               <label>Rejection Reason (Required)</label>
               <textarea
@@ -1587,7 +2079,10 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-              <button type="button" className="btn-danger" onClick={handleRejectLeaveConfirm}>Confirm Rejection</button>
+              <button type="button" className="btn-danger" onClick={handleRejectLeaveConfirm} disabled={isSubmitting}>
+                {isSubmitting && <span className="btn-spinner" />}
+                {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>
@@ -1601,6 +2096,12 @@ export default function App() {
               <h3 className="modal-title">Reject Expense Reimbursement</h3>
               <button className="btn-secondary btn-sm" onClick={() => setModalOpen(null)}>✕</button>
             </div>
+            {modalError && (
+              <div className="form-banner-error" role="alert">
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
             <div className="form-group">
               <label>Rejection Reason (Required)</label>
               <textarea
@@ -1613,7 +2114,10 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
               <button type="button" className="btn-secondary" onClick={() => setModalOpen(null)}>Cancel</button>
-              <button type="button" className="btn-danger" onClick={handleRejectExpenseConfirm}>Confirm Rejection</button>
+              <button type="button" className="btn-danger" onClick={handleRejectExpenseConfirm} disabled={isSubmitting}>
+                {isSubmitting && <span className="btn-spinner" />}
+                {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
             </div>
           </div>
         </div>

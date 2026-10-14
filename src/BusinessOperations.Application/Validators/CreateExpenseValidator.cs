@@ -18,6 +18,9 @@ public class CreateExpenseValidator : AbstractValidator<CreateExpenseDto>
             .NotEmpty().WithMessage("Currency is required.")
             .Length(3).WithMessage("Currency must be a 3-letter ISO code.");
 
+        RuleFor(x => x.Category)
+            .IsInEnum().WithMessage("A valid expense category must be selected.");
+
         RuleFor(x => x.ExpenseDate)
             .NotEmpty().WithMessage("Expense date is required.")
             .LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow)).WithMessage("Expense date cannot be in the future.");

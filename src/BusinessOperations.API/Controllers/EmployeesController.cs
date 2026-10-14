@@ -30,10 +30,12 @@ public class EmployeesController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] Guid? departmentId,
         [FromQuery] int page = 1,
+        [FromQuery] int? pageNumber = null,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
     {
-        var result = await _employeeService.GetPagedAsync(search, departmentId, page, pageSize, cancellationToken);
+        int effectivePage = pageNumber.HasValue && pageNumber.Value > 0 ? pageNumber.Value : page;
+        var result = await _employeeService.GetPagedAsync(search, departmentId, effectivePage, pageSize, cancellationToken);
         return Ok(result);
     }
 
