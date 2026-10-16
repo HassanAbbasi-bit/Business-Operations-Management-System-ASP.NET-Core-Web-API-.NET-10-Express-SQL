@@ -11,16 +11,16 @@ using BusinessOperations.Domain.Common;
 using BusinessOperations.Domain.Entities;
 using BusinessOperations.Domain.Enums;
 using BusinessOperations.Infrastructure.Data;
-using Microsoft.AspNetCore.Mvc.Testing;
+using BusinessOperations.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BusinessOperations.IntegrationTests.Controllers;
 
-public class LeaveRequestsEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class LeaveRequestsEndpointTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CustomWebApplicationFactory _factory;
 
-    public LeaveRequestsEndpointTests(WebApplicationFactory<Program> factory)
+    public LeaveRequestsEndpointTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
     }

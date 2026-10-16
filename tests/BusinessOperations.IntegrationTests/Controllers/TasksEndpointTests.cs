@@ -10,16 +10,16 @@ using BusinessOperations.Domain.Common;
 using BusinessOperations.Domain.Entities;
 using BusinessOperations.Domain.Enums;
 using BusinessOperations.Infrastructure.Data;
-using Microsoft.AspNetCore.Mvc.Testing;
+using BusinessOperations.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BusinessOperations.IntegrationTests.Controllers;
 
-public class TasksEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class TasksEndpointTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CustomWebApplicationFactory _factory;
 
-    public TasksEndpointTests(WebApplicationFactory<Program> factory)
+    public TasksEndpointTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
     }
@@ -231,5 +231,34 @@ public class TasksEndpointTests : IClassFixture<WebApplicationFactory<Program>>
         // Attempting to cancel a completed task is invalid
         var cancelResponse = await client.PostAsync($"/api/tasks/{task.Id}/cancel", null);
         Assert.Equal(HttpStatusCode.BadRequest, cancelResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetPaged_WithEmployeeToken_ScopesToOwnAssignedTasks()
+    {
+        var (_, emp1Id, _, client1) = await CreateEmployeeWithUserAsync();
+        var (_, emp2Id, _, client2) = await CreateEmployeeWithUserAsync();
+
+        // Create task for emp1
+        await client1.PostAsJsonAsync("/api/tasks", new CreateTaskItemDto
+        {
+            Title = "Task For Emp1",
+            AssignedToEmployeeId = emp1Id
+        });
+
+        // Create task for emp2
+        await client2.PostAsJsonAsync("/api/tasks", new CreateTaskItemDto
+        {
+            Title = "Task For Emp2",
+            AssignedToEmployeeId = emp2Id
+        });
+
+        // Emp1 lists tasks without specifying assignedToId query param
+        var response = await client1.GetAsync("/api/tasks?pageSize=50");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var paged = await response.Content.ReadFromJsonAsync<PagedResult<TaskItemDto>>();
+        Assert.NotNull(paged);
+        Assert.All(paged.Items, t => Assert.Equal(emp1Id, t.AssignedToEmployeeId));
     }
 }

@@ -9,16 +9,16 @@ using BusinessOperations.Application.Interfaces;
 using BusinessOperations.Domain.Common;
 using BusinessOperations.Domain.Entities;
 using BusinessOperations.Domain.Enums;
-using Microsoft.AspNetCore.Mvc.Testing;
+using BusinessOperations.IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BusinessOperations.IntegrationTests.Controllers;
 
-public class EmployeesEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public class EmployeesEndpointTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CustomWebApplicationFactory _factory;
 
-    public EmployeesEndpointTests(WebApplicationFactory<Program> factory)
+    public EmployeesEndpointTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
     }

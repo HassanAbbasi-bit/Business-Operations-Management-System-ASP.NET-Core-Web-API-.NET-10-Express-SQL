@@ -13,14 +13,17 @@ namespace BusinessOperations.API.Controllers;
 public class TasksController : ControllerBase
 {
     private readonly ITaskItemService _taskService;
+    private readonly IEmployeeService _employeeService;
 
-    public TasksController(ITaskItemService taskService)
+    public TasksController(ITaskItemService taskService, IEmployeeService employeeService)
     {
         _taskService = taskService;
+        _employeeService = employeeService;
     }
 
     /// <summary>
     /// Retrieves a paginated list of tasks with optional status, priority, assignee, and creator filters.
+    /// Non-admin and non-manager employees are automatically scoped to tasks assigned to them.
     /// </summary>
     [HttpGet]
     [Authorize]
@@ -38,6 +41,21 @@ public class TasksController : ControllerBase
     {
         int effectivePage = pageNumber.HasValue && pageNumber.Value > 0 ? pageNumber.Value : page;
         Guid? effectiveAssignee = assignedToId ?? assigneeId;
+
+        bool isAdminOrManager = User.IsInRole(UserRole.Admin.ToString()) || User.IsInRole(UserRole.Manager.ToString());
+        if (!isAdminOrManager)
+        {
+            var currentUserId = GetCurrentUserId();
+            if (currentUserId.HasValue)
+            {
+                var employee = await _employeeService.GetByUserIdAsync(currentUserId.Value, cancellationToken);
+                if (employee != null)
+                {
+                    effectiveAssignee = employee.Id;
+                }
+            }
+        }
+
         var result = await _taskService.GetPagedAsync(status, priority, effectiveAssignee, createdById, effectivePage, pageSize, cancellationToken);
         return Ok(result);
     }

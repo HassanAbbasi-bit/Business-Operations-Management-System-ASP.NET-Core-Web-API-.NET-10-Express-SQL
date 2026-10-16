@@ -271,7 +271,7 @@ export default function App() {
   const loadTasks = async () => {
     try {
       const params = {
-        pageSize: 100,
+        pageSize: 200,
         status: taskFilterStatus || undefined,
         priority: taskFilterPriority || undefined,
         search: taskSearch || undefined
@@ -645,6 +645,7 @@ export default function App() {
         description: newTaskForm.description.trim() || undefined,
         priority: Number(newTaskForm.priority),
         assignedToEmployeeId: newTaskForm.assignedToEmployeeId || undefined,
+        dueDateUtc: newTaskForm.dueDate ? new Date(newTaskForm.dueDate).toISOString() : undefined,
         dueDate: newTaskForm.dueDate || undefined
       });
       showToast('Task created successfully!');
@@ -656,8 +657,8 @@ export default function App() {
         assignedToEmployeeId: '',
         dueDate: getFutureDate(7)
       });
-      loadTasks();
-      refreshDashboard();
+      await loadTasks();
+      await refreshDashboard();
     } catch (err) {
       setModalError(err.message);
       showToast(err.message, 'error');
@@ -674,8 +675,8 @@ export default function App() {
       else if (action === 'complete') await api.tasks.complete(taskId);
       else if (action === 'cancel') await api.tasks.cancel(taskId);
       showToast('Task status updated!');
-      loadTasks();
-      refreshDashboard();
+      await loadTasks();
+      await refreshDashboard();
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -1060,7 +1061,7 @@ export default function App() {
                   <div>
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Assigned Deliverables</span>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      {(personalData.inProgressTasksCount || 0) + (personalData.assignedTasksCount || 0)} In Flight
+                      {personalData.assignedTasksCount ?? 0} In Flight
                     </div>
                   </div>
                   <div>
@@ -1477,7 +1478,7 @@ export default function App() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span className={`badge badge-${priorityStr.toLowerCase()}`}>{priorityStr}</span>
                               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                Due: {t.dueDate?.split('T')[0] || 'No date'}
+                                Due: {(t.dueDateUtc || t.dueDate)?.split('T')[0] || 'No date'}
                               </span>
                             </div>
                             <h4 style={{ fontSize: '0.95rem', fontWeight: 600 }}>{t.title}</h4>
@@ -1485,7 +1486,7 @@ export default function App() {
                               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{t.description}</p>
                             )}
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                              Assignee: {t.assigneeName || 'Unassigned'}
+                              Assignee: {t.assignedToEmployeeName || t.assigneeName || 'Unassigned'}
                             </div>
 
                             {/* Lifecycle State Actions */}
